@@ -19,8 +19,8 @@
         .nav-tab-btn.back-mode:hover { background: #64748b; }
         .order-badge { background: white; color: #f43f5e; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 10px; }
 
-        .import-btn-label { background: #4f46e5; color: white; font-weight: bold; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; display: inline-block; transition: background 0.2s; }
-        .import-btn-label:hover { background: #4338ca; }
+        .import-btn-label { background: #10b981; color: white; font-weight: bold; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; display: inline-block; transition: background 0.2s; }
+        .import-btn-label:hover { background: #059669; }
 
         #statusBox { padding: 12px; background: #1e293b; margin-bottom: 20px; border-radius: 6px; color: #38bdf8; font-weight: bold; border: 1px solid #334155; text-align: center; }
         
@@ -29,8 +29,8 @@
         input:focus, select:focus { border-color: #38bdf8; }
         input:disabled { background: #1e293b70; color: #94a3b8; border-style: dashed; cursor: not-allowed; }
         
-        .submit-btn { background: #10b981; font-weight: bold; cursor: pointer; border: none; padding: 12px 20px; border-radius: 6px; color: white; font-size: 14px; transition: background 0.2s; height: 100%; }
-        .submit-btn:hover { background: #059669; }
+        .submit-btn { background: #3b82f6; font-weight: bold; cursor: pointer; border: none; padding: 12px 20px; border-radius: 6px; color: white; font-size: 14px; transition: background 0.2s; height: 100%; }
+        .submit-btn:hover { background: #2563eb; }
         
         .search-container { margin-bottom: 20px; background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
         .search-input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #475569; color: #f8fafc; font-size: 15px; border-radius: 6px; }
@@ -85,7 +85,7 @@
             <input type="text" id="pName" placeholder="Барааны нэр" required>
             <input type="text" id="pType" placeholder="Төрөл" required>
             <input type="text" id="pCode" placeholder="Код" required>
-            <input type="number" id="pPrice" placeholder="Үнэ (₮)" required>
+            <input type="number" id="pPrice" placeholder="Нэгж үнэ (₮)" required>
             <input type="text" id="pVat" placeholder="Үнэ + НӨАТ (10%)" disabled>
             <input type="number" id="pStock" placeholder="Тоо ширхэг" required>
             
@@ -415,6 +415,7 @@
         }
     });
 
+    // ================= PARSER ADJUSTED TO THE CLEAN RE-STRUCTURED CSV LAYOUT =================
     function parseCSVLine(text) {
         let p = '', r = [];
         let q = false;
@@ -434,66 +435,54 @@
 
         const reader = new FileReader();
         statusBox.style.color = "#eab308";
-        statusBox.innerText = "⏳ Файлыг уншиж байна, түр хүлээнэ үү...";
+        statusBox.innerText = "⏳ Reading dataset, please wait...";
         importLabel.style.opacity = "0.5";
 
         reader.onload = async function (e) {
             const text = e.target.result;
             const lines = text.split(/\r?\n/);
             const uploadPayload = [];
-            let currentType = "Бусад";
 
-            // Row index 4 is the exact data starting line in Bvgd spreadsheet 
-            for (let i = 4; i < lines.length; i++) {
+            // Starts at index 1 because index 0 is the headers row
+            for (let i = 1; i < lines.length; i++) {
                 let line = lines[i].trim();
                 if (!line) continue;
 
                 let cols = parseCSVLine(line);
                 if (cols.length < 7) continue;
 
-                let pType = cols[0] ? cols[0].trim() : "";
-                let pName = cols[2] ? cols[2].trim() : "";
-
-                if (pType && pType.toLowerCase() !== "nan" && pType !== "") {
-                    currentType = pType;
-                }
-
-                if (!pName || pName.toLowerCase() === "nan" || pName.toLowerCase().includes("нийт")) {
-                    continue;
-                }
-
-                // FIXED MATHEMATICAL COLUMN MAPPING RULES FOR SPREADSHEET 
-                // Index 4 -> Actual Stock Count Column (тоо хэмжээ)
-                let stock = parseInt(cols[4]) || 0;
-                
-                // Index 5 -> Part Code Number
-                let code = cols[5] ? cols[5].trim() : "—";
+                let pName = cols[1] ? cols[1].trim() : "";
+                let pType = cols[2] ? cols[2].trim() : "Бусад";
+                let code = cols[3] ? cols[3].trim() : "—";
                 if(code.toLowerCase() === "nan" || code === "") code = "—";
 
-                // Index 6 -> Base Unit Price (Худалдах / нэгж үнэ)
-                let price = parseFloat(cols[6]) || 0;
-                
-                // Auto-calculate strict 10% VAT on top of base unit price
-                let vat = Math.round(price * 1.10);
+                let price = parseFloat(cols[4]) || 0;
+                let vat = parseFloat(cols[5]) || Math.round(price * 1.10);
+                let stock = parseInt(cols[6]) || 0;
+                let location = cols[7] ? cols[7].trim() : "Монос";
+
+                if (!pName || pName.toLowerCase() === "nan") {
+                    continue;
+                }
 
                 uploadPayload.push({
                     'id': Math.floor(10000000 + Math.random() * 90000000),
                     'Барааны нэр': pName,
-                    'Төрөл': currentType,
+                    'Төрөл': pType,
                     'код': code,
                     'нэгж үнэ': price,
                     'НӨАТ': vat,
                     'Барааны тооллого': stock,
-                    'Байршил': 'Монос'
+                    'Байршил': location
                 });
             }
 
-            statusBox.innerText = `⏳ Сэлбэгийн өгөгдлийг цэгцэлж дууслаа (${uploadPayload.length} мөр). Хуучин буруу өгөгдлийг устгаж байна...`;
+            statusBox.innerText = `⏳ Parsed ${uploadPayload.length} valid rows. Wiping old items for clean sync...`;
 
-            // Clear old values to allow clean reset
+            // Clear old items
             await supabaseClient.from('products').delete().neq('id', 0);
 
-            statusBox.innerText = `🚀 Зөв өгөгдлийг агуулах руу хуулж байна...`;
+            statusBox.innerText = `🚀 Synchronizing clean data into database...`;
 
             const chunkSize = 150;
             let successCount = 0;
@@ -503,19 +492,19 @@
                 const { error } = await supabaseClient.from('products').insert(chunk);
                 
                 if (error) {
-                    alert(`Алдаа гарлаа: ${error.message}`);
+                    alert(`Sync Error: ${error.message}`);
                     statusBox.style.color = "#ef4444";
-                    statusBox.innerText = `Алдаа: Ачааллах явцад гацлаа - ${error.message}`;
+                    statusBox.innerText = `Error: stopped at chunk due to ${error.message}`;
                     importLabel.style.opacity = "1";
                     fetchProducts();
                     return;
                 }
                 successCount += chunk.length;
-                statusBox.innerText = `⏳ Агуулахын сан шинэчилж байна... (${successCount} / ${uploadPayload.length})`;
+                statusBox.innerText = `⏳ Transferring data... (${successCount} / ${uploadPayload.length})`;
             }
 
             statusBox.style.color = "#4ade80";
-            statusBox.innerText = `🎉 Амжилттай! Бүх ${successCount} барааны үнэ болон тооллого зөвөөр орлоо.`;
+            statusBox.innerText = `🎉 Complete! Successfully processed ${successCount} parts with verified prices & inventory.`;
             importLabel.style.opacity = "1";
             bulkCsvInput.value = ""; 
             fetchProducts();
