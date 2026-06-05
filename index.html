@@ -18,7 +18,7 @@
         .nav-tab-btn.back-mode:hover { background: #64748b; }
         .order-badge { background: white; color: #f43f5e; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 10px; }
 
-        /* Prominent Print Button Layout */
+        /* Standalone Print Button Action Ribbon */
         .print-action-bar { display: flex; justify-content: flex-end; margin-bottom: 15px; margin-top: 10px; }
         .print-btn { background: #2563eb; color: white; font-weight: bold; padding: 12px 24px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
         .print-btn:hover { background: #1d4ed8; }
@@ -67,7 +67,7 @@
         .page-btn:disabled { background: #1e293b; color: #64748b; border-color: #334155; cursor: not-allowed; }
         .page-indicator { font-size: 14px; font-weight: 600; color: #94a3b8; }
 
-        /* CLEAN PRINT OVERRIDES - Hides all app dark UI elements on paper */
+        /* CLEAN PRINT ENGINE OVERRIDES */
         @media print {
             body { background: white !important; color: black !important; padding: 0 !important; }
             .container { max-width: 100% !important; border: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; }
@@ -423,28 +423,25 @@
         fetchOutOfStockItems();
     }
 
-    // ADVANCED CHUNKED BATCHING LOGIC - Overcomes Supabase 1,000 item API protection limit
+    // UNLIMITED CURSOR KEY PAGINATION PRINT ENGINE (Completely circumvents the 1,000 item limit)
     window.printCompleteList = async function() {
         const originalStatus = statusBox.innerText;
         const originalColor = statusBox.style.color;
         
         try {
             statusBox.style.color = "#e11d48";
-            statusBox.innerText = "🖨️ Хэвлэх файл бэлдэж байна... Өгөгдлийг багцаар татаж байна...";
+            statusBox.innerText = "🖨️ Базаас бүх өгөгдлийг татаж байна... Түр хүлээнэ үү...";
 
             let allPrintData = [];
             let hasMore = true;
-            let offset = 0;
-            const batchSize = 1000; // Optimal batch size block limit
+            let lastIdCursor = null; // High-performance sequential pointer loop
+            const pageSizeLimit = 1000;
 
             while (hasMore) {
-                let currentBatchData = [];
-                let errorOccurred = null;
+                let query = supabaseClient.from('products').select('*');
 
                 if (currentActiveTab === "inventory") {
                     const searchQuery = searchInput.value.trim();
-                    let query = supabaseClient.from('products').select('*');
-
                     if (searchQuery !== "") {
                         if (!isNaN(searchQuery)) {
                             query = query.eq('код', parseFloat(searchQuery));
@@ -452,48 +449,44 @@
                             query = query.or(`"Барааны нэр".ilike.%${searchQuery}%,Төрөл.ilike.%${searchQuery}%,Байршил.ilike.%${searchQuery}%`);
                         }
                     }
-                    
-                    const { data, error } = await query
-                        .order('id', { ascending: false })
-                        .range(offset, offset + batchSize - 1);
-                        
-                    if (error) errorOccurred = error.message;
-                    else currentBatchData = data;
-
                 } else {
-                    const { data, error } = await supabaseClient
-                        .from('products')
-                        .select('*')
-                        .lte('Барааны тооллого', 0)
-                        .order('id', { ascending: false })
-                        .range(offset, offset + batchSize - 1);
-                        
-                    if (error) errorOccurred = error.message;
-                    else currentBatchData = data;
+                    // Filters out-of-stock items tab
+                    query = query.lte('Барааны тооллого', 0);
                 }
 
-                if (errorOccurred) {
-                    alert("Хэвлэх өгөгдөл татахад алдаа гарлаа: " + errorOccurred);
+                // If cursor is set, ask only for IDs smaller than the last seen item ID
+                if (lastIdCursor !== null) {
+                    query = query.lt('id', lastIdCursor);
+                }
+
+                // Order securely by unique ID column descending and pull the block limit
+                const { data, error } = await query
+                    .order('id', { ascending: false })
+                    .limit(pageSizeLimit);
+
+                if (error) {
+                    alert("Мэдээлэл татахад алдаа гарлаа: " + error.message);
                     return;
                 }
 
-                if (currentBatchData && currentBatchData.length > 0) {
-                    allPrintData = allPrintData.concat(currentBatchData);
-                    offset += batchSize;
-                    statusBox.innerText = `🖨️ Өгөгдөл татаж байна... (${allPrintData.length} бараа уншлаа)`;
+                if (data && data.length > 0) {
+                    allPrintData = allPrintData.concat(data);
+                    lastIdCursor = data[data.length - 1].id; // Advance our key-cursor forward
+                    statusBox.innerText = `🖨️ Ачаалж байна... (${allPrintData.length} бараа уншлаа)`;
                     
-                    // If the response is smaller than the requested batch size, we reached the end
-                    if (currentBatchData.length < batchSize) {
-                        hasMore = false;
+                    if (data.length < pageSizeLimit) {
+                        hasMore = false; // Finished reading all available rows
                     }
                 } else {
                     hasMore = false;
                 }
             }
 
+            // Cache standard webpage views
             const activeInventoryHTML = tableBody.innerHTML;
             const activeOrderHTML = orderTableBody.innerHTML;
 
+            // Generate full paper print body markup sheet
             if (currentActiveTab === "inventory") {
                 tableBody.innerHTML = '';
                 allPrintData.forEach(product => {
@@ -527,10 +520,10 @@
                 });
             }
 
-            // Launch standard browser system print frames
+            // Trigger system hardware output printer panel
             window.print();
 
-            // Revert layout cleanly back to the active page window
+            // Return layout frame context safely back to standard active page view rows
             if (currentActiveTab === "inventory") {
                 tableBody.innerHTML = activeInventoryHTML;
             } else {
