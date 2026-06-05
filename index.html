@@ -13,8 +13,8 @@
         #statusBox { padding: 12px; background: #1e293b; margin-bottom: 20px; border-radius: 6px; color: #38bdf8; font-weight: bold; border: 1px solid #334155; text-align: center; }
         
         form { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) auto; gap: 12px; margin-bottom: 25px; }
-        input { padding: 12px; border-radius: 6px; background: #1e293b; color: white; border: 1px solid #334155; outline: none; font-size: 14px; width: 100%; box-sizing: border-box; }
-        input:focus { border-color: #38bdf8; }
+        input, select { padding: 12px; border-radius: 6px; background: #1e293b; color: white; border: 1px solid #334155; outline: none; font-size: 14px; width: 100%; box-sizing: border-box; }
+        input:focus, select:focus { border-color: #38bdf8; }
         
         input:disabled { background: #1e293b70; color: #94a3b8; border-style: dashed; cursor: not-allowed; }
         
@@ -23,25 +23,21 @@
         
         .search-container { margin-bottom: 20px; background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
         .search-input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #475569; color: #f8fafc; font-size: 15px; border-radius: 6px; }
-        .search-input:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2); }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 14px; border-bottom: 1px solid #334155; text-align: left; font-size: 14px; }
         th { background: #334155; color: #38bdf8; font-weight: 600; text-transform: uppercase; font-size: 12px; }
         tr:hover { background: #1e293b; }
         
-        .action-container { display: flex; gap: 6px; }
+        /* Inline adjustable controls configuration */
+        .adjustment-box { display: flex; gap: 4px; align-items: center; max-width: 260px; }
+        .adjustment-box input { padding: 6px; font-size: 13px; width: 65px; text-align: center; }
+        .adjustment-box select { padding: 6px; font-size: 13px; width: 95px; background: #0f172a; }
         
-        .minus-btn { background: #f59e0b; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .minus-btn:hover { background: #d97706; }
-        .minus-btn:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
-        
-        .plus-btn { background: #3b82f6; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .plus-btn:hover { background: #2563eb; }
+        .save-btn { background: #3b82f6; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; font-weight: bold; width: 80px; }
+        .save-btn:hover { background: #2563eb; }
         
         .out-of-stock { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px; }
-        
-        /* Order table custom header color to distinguish it */
         .order-table th { background: #4c1d95; color: #f472b6; }
     </style>
 </head>
@@ -75,7 +71,7 @@
                 <th>Нэгж үнэ</th>
                 <th>Үнэ + НӨАТ</th>
                 <th>Тоо ширхэг</th>
-                <th>Үйлдэл</th>
+                <th>Тооллого өөрчлөх</th>
             </tr>
         </thead>
         <tbody id="inventoryTableBody">
@@ -93,11 +89,11 @@
                 <th>Код</th>
                 <th>Үнэ + НӨАТ</th>
                 <th>Төлөв</th>
-                <th>Түргэн нэмэх</th>
+                <th>Шинээр захиалга авах</th>
             </tr>
         </thead>
         <tbody id="orderTableBody">
-            <tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна.</td></tr>
+            <tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>
         </tbody>
     </table>
 </div>
@@ -157,10 +153,7 @@
             } else {
                 renderTable(allProductsCache);
             }
-
-            // NEW: Run the order list generator right after fetching fresh database records
             renderOrderTable(allProductsCache);
-
         } catch (err) {
             statusBox.style.color = "#ef4444";
             statusBox.innerText = "Алдаа гарлаа: " + err.message;
@@ -177,7 +170,6 @@
         products.forEach(product => {
             const currentStock = parseInt(product['Барааны тооллого'] || 0);
             const stockDisplay = currentStock > 0 ? `${currentStock} ширхэг` : `<span class="out-of-stock">Дууссан (0)</span>`;
-            const isMinusDisabled = currentStock <= 0 ? 'disabled' : '';
 
             const row = `
                 <tr>
@@ -188,13 +180,13 @@
                     <td style="color: #f39c12; font-weight: bold;">${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
                     <td>${stockDisplay}</td>
                     <td>
-                        <div class="action-container">
-                            <button class="minus-btn" ${isMinusDisabled} onclick="updateStockCount(${product.id}, ${currentStock}, -1)">
-                                Зарсан (-1)
-                            </button>
-                            <button class="plus-btn" onclick="updateStockCount(${product.id}, ${currentStock}, 1)">
-                                Нэмэх (+1)
-                            </button>
+                        <div class="adjustment-box">
+                            <input type="number" id="amt-${product.id}" value="1" min="1">
+                            <select id="action-${product.id}">
+                                <option value="subtract">Хасах (-)</option>
+                                <option value="add">Нэмэх (+)</option>
+                            </select>
+                            <button class="save-btn" onclick="handleAdjust(${product.id}, ${currentStock}, 'amt-${product.id}', 'action-${product.id}')">Хадгалах</button>
                         </div>
                     </td>
                 </tr>
@@ -203,12 +195,9 @@
         });
     }
 
-    // NEW FUNCTION: Automatically scans all cache data for items sitting at 0 stock
     function renderOrderTable(allProducts) {
         orderTableBody.innerHTML = '';
-        
-        // Filter out items where stock is less than or equal to 0
-        const outOfStockItems = allProducts.filter(p => parseInt(p['Барааны тооллого'] || 0) <= 0);
+        const outOfStockItems = allProducts.filter(p => parseInt(p['Баarааны тооллого'] || 0) <= 0);
         
         if (outOfStockItems.length === 0) {
             orderTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>';
@@ -224,14 +213,55 @@
                     <td>${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
                     <td><span class="out-of-stock" style="background: rgba(244, 63, 94, 0.15)">⚠️ Захиалах шаардлагатай</span></td>
                     <td>
-                        <button class="plus-btn" onclick="updateStockCount(${product.id}, 0, 1)">
-                            Шинээр ирсэн (+1)
-                        </button>
+                        <div class="adjustment-box">
+                            <input type="number" id="orderAmt-${product.id}" value="10" min="1">
+                            <button class="save-btn" style="background: #10b981; width: 120px;" onclick="handleAdjust(${product.id}, 0, 'orderAmt-${product.id}', 'add_fixed')">Ирсэн (Нэмэх)</button>
+                        </div>
                     </td>
                 </tr>
             `;
             orderTableBody.innerHTML += row;
         });
+    }
+
+    // NEW INTERACTIVE LOGIC: Calculates custom inputted weights dynamically
+    window.handleAdjust = async function(id, currentStock, inputId, actionIdOrType) {
+        const inputField = document.getElementById(inputId);
+        const changeAmount = parseInt(inputField.value);
+        
+        if(isNaN(changeAmount) || changeAmount <= 0) {
+            alert("Зөв тоо хэмжээ оруулна уу!");
+            return;
+        }
+
+        let actionType = actionIdOrType;
+        if(actionIdOrType !== 'add_fixed') {
+            actionType = document.getElementById(actionIdOrType).value;
+        }
+
+        let newStock = currentStock;
+        if(actionType === 'add' || actionType === 'add_fixed') {
+            newStock = currentStock + changeAmount;
+        } else if(actionType === 'subtract') {
+            newStock = currentStock - changeAmount;
+            if (newStock < 0) {
+                alert(`Алдаа: Таны агуулахад ердөө ${currentStock} ширхэг үлдсэн тул ${changeAmount}-ийг хасах боломжгүй!`);
+                return;
+            }
+        }
+
+        statusBox.innerText = "Тооллого шинэчилж байна...";
+
+        const { error } = await supabaseClient
+            .from('products')
+            .update({ 'Барааны тооллого': newStock })
+            .eq('id', id);
+
+        if (error) {
+            alert("Алдаа гарлаа: " + error.message);
+        } else {
+            fetchProducts();
+        }
     }
 
     productForm.addEventListener('submit', async (e) => {
@@ -261,24 +291,6 @@
             fetchProducts(); 
         }
     });
-
-    window.updateStockCount = async function(id, currentStock, amount) {
-        const newStock = currentStock + amount;
-        if (newStock < 0) return; 
-        
-        statusBox.innerText = "Тооллого шинэчилж байна...";
-
-        const { error } = await supabaseClient
-            .from('products')
-            .update({ 'Барааны тооллого': newStock })
-            .eq('id', id);
-
-        if (error) {
-            alert("Алдаа гарлаа: " + error.message);
-        } else {
-            fetchProducts(); 
-        }
-    }
 
     fetchProducts();
 </script>
