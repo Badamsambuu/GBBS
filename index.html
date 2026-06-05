@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Бараа Удирдах Систем</title>
+    <!-- Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #1e293b; color: #f8fafc; }
@@ -20,7 +21,6 @@
 
         #statusBox { padding: 12px; background: #1e293b; margin-bottom: 20px; border-radius: 6px; color: #38bdf8; font-weight: bold; border: 1px solid #334155; text-align: center; }
         
-        /* Form expanded slightly to comfortably fit the location field input */
         form { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) auto; gap: 12px; margin-bottom: 25px; }
         input, select { padding: 12px; border-radius: 6px; background: #1e293b; color: white; border: 1px solid #334155; outline: none; font-size: 14px; width: 100%; box-sizing: border-box; }
         input:focus, select:focus { border-color: #38bdf8; }
@@ -37,8 +37,10 @@
         th { background: #334155; color: #38bdf8; font-weight: 600; text-transform: uppercase; font-size: 12px; }
         tr:hover { background: #1e293b; }
         
-        /* Location tag style formatting */
-        .location-tag { background: #1e293b; border: 1px solid #475569; padding: 4px 8px; border-radius: 4px; color: #cbd5e1; font-family: monospace; font-size: 13px; }
+        .location-tag { padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 13px; display: inline-block; }
+        .loc-monos { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .loc-22 { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .loc-unknown { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
         
         .adjustment-box { display: flex; gap: 4px; align-items: center; max-width: 260px; }
         .adjustment-box input { padding: 6px; font-size: 13px; width: 65px; text-align: center; }
@@ -69,6 +71,7 @@
     
     <div id="statusBox">Систем ачаалж байна...</div>
 
+    <!-- ================= SUB-PAGE 1: MAIN ACTIVE INVENTORY SCREEN ================= -->
     <div id="mainInventoryView">
         <form id="productForm">
             <input type="text" id="pName" placeholder="Барааны нэр" required>
@@ -77,12 +80,19 @@
             <input type="number" id="pPrice" placeholder="Үнэ (₮)" required>
             <input type="text" id="pVat" placeholder="Үнэ + НӨАТ (10%)" disabled>
             <input type="number" id="pStock" placeholder="Тоо ширхэг" required>
-            <input type="text" id="pLoc" placeholder="Байршил (жишээ нь: А-3, Тавиур 2)" required>
+            
+            <!-- FIXED SELECTOR: The text parenthetical prompt has been removed -->
+            <select id="pLoc" required>
+                <option value="" disabled selected>Байршил сонгох...</option>
+                <option value="Монос">Монос</option>
+                <option value="22">22</option>
+            </select>
+            
             <button type="submit" class="submit-btn">Нэмэх</button>
         </form>
 
         <div class="search-container">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Бараа хайх... (Нэр, Төрөл, Код эсвэл Байршлаар шүүх боломжтой)">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Бараа хайх... (Нэр, Төрөл, Код эсвэл 'Монос', '22' гэж шүүх боломжтой)">
         </div>
 
         <table>
@@ -91,7 +101,8 @@
                     <th>Барааны нэр</th>
                     <th>Төрөл</th>
                     <th>Код</th>
-                    <th>Байршил</th> <th>Нэгж үнэ</th>
+                    <th>Байршил</th>
+                    <th>Нэгж үнэ</th>
                     <th>Үнэ + НӨАТ</th>
                     <th>Тоо ширхэг</th>
                     <th>Тооллого өөрчлөх</th>
@@ -103,6 +114,7 @@
         </table>
     </div>
 
+    <!-- ================= SUB-PAGE 2: THE WHOLE WINDOW ORDER VIEW ================= -->
     <div id="orderListView">
         <div class="subpage-title">🚨 Захиалга хийх барааны жагсаалт (Агуулахад дууссан)</div>
         <table class="order-table">
@@ -111,7 +123,8 @@
                     <th>Барааны нэр</th>
                     <th>Төрөл</th>
                     <th>Код</th>
-                    <th>Байршил</th> <th>Үнэ + НӨАТ</th>
+                    <th>Байршил</th>
+                    <th>Үнэ + НӨАТ</th>
                     <th>Төлөв</th>
                     <th>Шинээр захиалга авах</th>
                 </tr>
@@ -182,7 +195,6 @@
             const name = (product['Барааны нэр'] || '').toLowerCase();
             const type = (product['Төрөл'] || '').toLowerCase();
             const code = String(product['код'] || '').toLowerCase();
-            // NEW: Expanded search filter matching against data location values
             const loc = (product['Байршил'] || '').toLowerCase();
             return name.includes(query) || type.includes(query) || code.includes(query) || loc.includes(query);
         });
@@ -214,6 +226,13 @@
         }
     }
 
+    function getLocationBadgeMarkup(locationString) {
+        if (!locationString) return `<span class="location-tag loc-unknown">Оруулаагүй</span>`;
+        if (locationString === 'Монос') return `<span class="location-tag loc-monos">🏢 Монос</span>`;
+        if (locationString === '22') return `<span class="location-tag loc-22">🚚 22</span>`;
+        return `<span class="location-tag loc-unknown">${locationString}</span>`;
+    }
+
     function renderTable(products) {
         tableBody.innerHTML = '';
         if(!products || products.length === 0) {
@@ -225,15 +244,12 @@
             const currentStock = parseInt(product['Барааны тооллого'] || 0);
             const stockDisplay = currentStock > 0 ? `${currentStock} ширхэг` : `<span class="out-of-stock">Дууссан (0)</span>`;
             
-            // Safe reference extraction for the newly added Location values
-            const locationDisplay = product['Байршил'] || 'Оруулаагүй';
-
             const row = `
                 <tr>
                     <td><strong>${product['Барааны нэр'] || '—'}</strong></td>
                     <td><span style="color: #94a3b8;">${product['Төрөл'] || '—'}</span></td>
                     <td><code>${product['код'] || '0'}</code></td>
-                    <td><span class="location-tag">📍 ${locationDisplay}</span></td>
+                    <td>${getLocationBadgeMarkup(product['Байршил'])}</td>
                     <td style="color: #4ade80; font-weight: bold;">${Number(product['нэгж үнэ'] || 0).toLocaleString()} ₮</td>
                     <td style="color: #f39c12; font-weight: bold;">${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
                     <td>${stockDisplay}</td>
@@ -270,14 +286,12 @@
         }
 
         outOfStockItems.forEach(product => {
-            const locationDisplay = product['Байршил'] || 'Оруулаагүй';
-            
             const row = `
                 <tr>
                     <td><strong style="color: #f43f5e;">${product['Барааны нэр'] || '—'}</strong></td>
                     <td><span>${product['Төрөл'] || '—'}</span></td>
                     <td><code>${product['код'] || '0'}</code></td>
-                    <td><span class="location-tag" style="border-color: #f43f5e50;">📍 ${locationDisplay}</span></td>
+                    <td>${getLocationBadgeMarkup(product['Байrшил'])}</td>
                     <td>${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
                     <td><span class="out-of-stock" style="background: rgba(244, 63, 94, 0.15)">⚠️ Захиалах</span></td>
                     <td>
@@ -346,7 +360,7 @@
             'нэгж үнэ': priceValue,
             'НӨАТ': totalVatValue, 
             'Барааны тооллого': parseInt(document.getElementById('pStock').value),
-            'Байршил': document.getElementById('pLoc').value // NEW: Sends inputted location string text to your table column
+            'Байршил': document.getElementById('pLoc').value
         };
 
         const { error } = await supabaseClient.from('products').insert([payload]);
