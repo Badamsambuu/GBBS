@@ -18,6 +18,11 @@
         .nav-tab-btn.back-mode:hover { background: #64748b; }
         .order-badge { background: white; color: #f43f5e; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 10px; }
 
+        /* Prominent Print Button Layout */
+        .print-action-bar { display: flex; justify-content: flex-end; margin-bottom: 15px; margin-top: 10px; }
+        .print-btn { background: #2563eb; color: white; font-weight: bold; padding: 12px 24px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+        .print-btn:hover { background: #1d4ed8; }
+
         #statusBox { padding: 12px; background: #1e293b; margin-bottom: 20px; border-radius: 6px; color: #38bdf8; font-weight: bold; border: 1px solid #334155; text-align: center; }
         
         form { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) auto; gap: 12px; margin-bottom: 25px; }
@@ -56,12 +61,23 @@
         .order-table th { background: #4c1d95; color: #f472b6; }
         .subpage-title { color: #f43f5e; margin-top: 0; margin-bottom: 20px; font-size: 20px; font-weight: bold; }
 
-        /* Pagination Controls Styling */
         .pagination-container { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px; padding-top: 15px; border-top: 1px solid #334155; }
         .page-btn { background: #334155; color: white; border: 1px solid #475569; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background 0.2s; }
         .page-btn:hover { background: #475569; }
         .page-btn:disabled { background: #1e293b; color: #64748b; border-color: #334155; cursor: not-allowed; }
-        #pageIndicator { font-size: 14px; font-weight: 600; color: #94a3b8; }
+        .page-indicator { font-size: 14px; font-weight: 600; color: #94a3b8; }
+
+        /* CLEAN PRINT OVERRIDES - Hides all app dark UI elements on paper */
+        @media print {
+            body { background: white !important; color: black !important; padding: 0 !important; }
+            .container { max-width: 100% !important; border: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; }
+            .window-header, form, .search-container, .pagination-container, #statusBox, .action-container, .print-action-bar, th:last-child, td:last-child { display: none !important; }
+            table { width: 100% !important; margin-top: 20px !important; border: 1px solid #000 !important; }
+            th, td { border-bottom: 1px solid #000 !important; color: black !important; padding: 8px !important; font-size: 12px !important; }
+            th { background: #eaeaea !important; color: black !important; }
+            .location-tag { background: transparent !important; border: none !important; color: black !important; padding: 0 !important; font-weight: normal !important; }
+            .out-of-stock { background: transparent !important; color: red !important; padding: 0 !important; }
+        }
     </style>
 </head>
 <body>
@@ -95,6 +111,10 @@
             <button type="submit" class="submit-btn">Нэмэх</button>
         </form>
 
+        <div class="print-action-bar">
+            <button type="button" class="print-btn" onclick="printCompleteList()">🖨️ Бүх барааг хэвлэх</button>
+        </div>
+
         <div class="search-container">
             <input type="text" id="searchInput" class="search-input" placeholder="🔍 Бараа хайх... (Нэр, Төрөл эсвэл Кодоор шүүнэ)">
         </div>
@@ -119,13 +139,18 @@
 
         <div class="pagination-container">
             <button class="page-btn" id="prevPageBtn" onclick="changePage(-1)">⬅️ Өмнөх</button>
-            <span id="pageIndicator">Хуудас 1 / 1</span>
+            <span class="page-indicator" id="pageIndicator">Хуудас 1 / 1</span>
             <button class="page-btn" id="nextPageBtn" onclick="changePage(1)">Дараах ➡️</button>
         </div>
     </div>
 
     <div id="orderListView">
         <div class="subpage-title">🚨 Захиалга хийх барааны жагсаалт (Агуулахад дууссан)</div>
+        
+        <div class="print-action-bar">
+            <button type="button" class="print-btn" onclick="printCompleteList()">🖨️ Захиалгын хуудсыг хэвлэх</button>
+        </div>
+
         <table class="order-table">
             <thead>
                 <tr>
@@ -142,6 +167,12 @@
                 <tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>
             </tbody>
         </table>
+
+        <div class="pagination-container">
+            <button class="page-btn" id="orderPrevPageBtn" onclick="changeOrderPage(-1)">⬅️ Өмнөх</button>
+            <span class="page-indicator" id="orderPageIndicator">Хуудас 1 / 1</span>
+            <button class="page-btn" id="orderNextPageBtn" onclick="changeOrderPage(1)">Дараах ➡️</button>
+        </div>
     </div>
 
 </div>
@@ -166,8 +197,8 @@
     const orderBadgeCount = document.getElementById('orderBadgeCount');
     const windowTitle = document.getElementById('windowTitle');
 
-    // Server-side Pagination Configuration state Variables
     let currentPage = 1;
+    let currentOrderPage = 1;
     const rowsPerPage = 50; 
     let currentActiveTab = "inventory";
     let searchTimeout = null;
@@ -180,6 +211,7 @@
             viewToggleBtn.innerHTML = `⬅️ Үндсэн цэс рүү буцах`;
             viewToggleBtn.classList.add("back-mode");
             currentActiveTab = "orders";
+            currentOrderPage = 1; 
             fetchOutOfStockItems();
         } else {
             orderListView.style.display = "none";
@@ -188,6 +220,7 @@
             viewToggleBtn.innerHTML = `📋 Захиалга Хийх Бараанууд <span class="order-badge" id="orderBadgeCount">${orderBadgeCount.innerText}</span>`;
             viewToggleBtn.classList.remove("back-mode");
             currentActiveTab = "inventory";
+            currentPage = 1; 
             fetchProducts(); 
         }
     });
@@ -202,13 +235,12 @@
         }
     });
 
-    // Debounced Search Input handler to prevent rapid query spamming
     searchInput.addEventListener('input', () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             currentPage = 1; 
             fetchProducts();
-        }, 300); // 300ms debounce window
+        }, 300);
     });
 
     async function fetchProducts() {
@@ -220,12 +252,10 @@
             const startIndex = (currentPage - 1) * rowsPerPage;
             const endIndex = startIndex + rowsPerPage - 1;
 
-            // Start building query
             let query = supabaseClient
                 .from('products')
-                .select('*', { count: 'exact' }); // Requests total count of matches dynamically
+                .select('*', { count: 'exact' });
 
-            // Apply Server-Side filter matches if query is active
             if (searchQuery !== "") {
                 if (!isNaN(searchQuery)) {
                     query = query.eq('код', parseFloat(searchQuery));
@@ -234,7 +264,6 @@
                 }
             }
 
-            // Apply server order boundaries and specific page index constraints
             const { data, error, count } = await query
                 .order('id', { ascending: false })
                 .range(startIndex, endIndex);
@@ -247,8 +276,6 @@
 
             statusBox.innerText = "Систем бэлэн. Нийт шүүгдсэн бараа: " + (count || 0);
             renderTable(data || [], count || 0);
-            
-            // Silently update out-of-stock count badge in the background
             updateBadgeCount();
         } catch (err) {
             statusBox.style.color = "#ef4444";
@@ -268,18 +295,33 @@
     }
 
     async function fetchOutOfStockItems() {
-        orderTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Захиалгуудыг ачаалж байна...</td></tr>';
-        const { data, error } = await supabaseClient
-            .from('products')
-            .select('*')
-            .lte('Барааны тооллого', 0)
-            .order('id', { ascending: false });
+        try {
+            statusBox.style.color = "#38bdf8";
+            statusBox.innerText = "Захиалга ачаалж байна...";
+            orderTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Захиалгуудыг ачаалж байна...</td></tr>';
+            
+            const startIndex = (currentOrderPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage - 1;
 
-        if (error) {
-            alert("Захиалга татахад алдаа гарлаа: " + error.message);
-            return;
+            const { data, error, count } = await supabaseClient
+                .from('products')
+                .select('*', { count: 'exact' })
+                .lte('Барааны тооллого', 0)
+                .order('id', { ascending: false })
+                .range(startIndex, endIndex);
+
+            if (error) {
+                statusBox.style.color = "#ef4444";
+                statusBox.innerText = "Алдаа: " + error.message;
+                return;
+            }
+
+            statusBox.innerText = "Жагсаалт бэлэн. Нийт дууссан бараа: " + (count || 0);
+            renderOrderTable(data || [], count || 0);
+        } catch (err) {
+            statusBox.style.color = "#ef4444";
+            statusBox.innerText = "Алдаа гарлаа: " + err.message;
         }
-        renderOrderTable(data || []);
     }
 
     function getLocationBadgeMarkup(locationString) {
@@ -335,17 +377,20 @@
         });
     }
 
-    window.changePage = function(direction) {
-        currentPage += direction;
-        fetchProducts();
-    }
-
-    function renderOrderTable(outOfStockItems) {
+    function renderOrderTable(outOfStockItems, totalCount) {
         orderTableBody.innerHTML = '';
-        if (outOfStockItems.length === 0) {
+        if (!outOfStockItems || outOfStockItems.length === 0) {
             orderTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>';
+            document.getElementById('orderPageIndicator').innerText = "Хуудас 0 / 0";
+            document.getElementById('orderPrevPageBtn').disabled = true;
+            document.getElementById('orderNextPageBtn').disabled = true;
             return;
         }
+
+        const totalPages = Math.ceil(totalCount / rowsPerPage);
+        document.getElementById('orderPageIndicator').innerText = `Хуудас ${currentOrderPage} / ${totalPages}`;
+        document.getElementById('orderPrevPageBtn').disabled = (currentOrderPage === 1);
+        document.getElementById('orderNextPageBtn').disabled = (currentOrderPage >= totalPages);
 
         outOfStockItems.forEach(product => {
             const row = `
@@ -366,6 +411,114 @@
             `;
             orderTableBody.innerHTML += row;
         });
+    }
+
+    window.changePage = function(direction) {
+        currentPage += direction;
+        fetchProducts();
+    }
+
+    window.changeOrderPage = function(direction) {
+        currentOrderPage += direction;
+        fetchOutOfStockItems();
+    }
+
+    // BACKGROUND PRINTING LOGIC (Fetches unlimited database items directly to physical paper format)
+    window.printCompleteList = async function() {
+        const originalStatus = statusBox.innerText;
+        const originalColor = statusBox.style.color;
+        
+        try {
+            statusBox.style.color = "#e11d48";
+            statusBox.innerText = "🖨️ Хэвлэх файл бэлдэж байна... Бүх өгөгдлийг сервэрээс татаж байна...";
+
+            let allPrintData = [];
+            let errorOccurred = false;
+
+            if (currentActiveTab === "inventory") {
+                const searchQuery = searchInput.value.trim();
+                let query = supabaseClient.from('products').select('*');
+
+                if (searchQuery !== "") {
+                    if (!isNaN(searchQuery)) {
+                        query = query.eq('код', parseFloat(searchQuery));
+                    } else {
+                        query = query.or(`"Барааны нэр".ilike.%${searchQuery}%,Төрөл.ilike.%${searchQuery}%,Байршил.ilike.%${searchQuery}%`);
+                    }
+                }
+                
+                const { data, error } = await query.order('id', { ascending: false });
+                if (error) errorOccurred = error.message;
+                else allPrintData = data;
+
+            } else {
+                const { data, error } = await supabaseClient
+                    .from('products')
+                    .select('*')
+                    .lte('Барааны тооллого', 0)
+                    .order('id', { ascending: false });
+                    
+                if (error) errorOccurred = error.message;
+                else allPrintData = data;
+            }
+
+            if (errorOccurred) {
+                alert("Хэвлэх өгөгдөл татахад алдаа гарлаа: " + errorOccurred);
+                return;
+            }
+
+            const activeInventoryHTML = tableBody.innerHTML;
+            const activeOrderHTML = orderTableBody.innerHTML;
+
+            if (currentActiveTab === "inventory") {
+                tableBody.innerHTML = '';
+                allPrintData.forEach(product => {
+                    const currentStock = parseInt(product['Барааны тооллого'] || 0);
+                    const stockStr = currentStock > 0 ? `${currentStock} ш` : `Дууссан`;
+                    tableBody.innerHTML += `
+                        <tr>
+                            <td><strong>${product['Барааны нэр'] || '—'}</strong></td>
+                            <td>${product['Төрөл'] || '—'}</td>
+                            <td>${product['код'] || '0'}</td>
+                            <td>${product['Байршил'] || '—'}</td>
+                            <td>${Number(product['нэгж үнэ'] || 0).toLocaleString()} ₮</td>
+                            <td>${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
+                            <td>${stockStr}</td>
+                            <td></td>
+                        </tr>`;
+                });
+            } else {
+                orderTableBody.innerHTML = '';
+                allPrintData.forEach(product => {
+                    orderTableBody.innerHTML += `
+                        <tr>
+                            <td><strong>${product['Барааны нэр'] || '—'}</strong></td>
+                            <td>${product['Төрөл'] || '—'}</td>
+                            <td>${product['код'] || '0'}</td>
+                            <td>${product['Байршил'] || '—'}</td>
+                            <td>${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
+                            <td>Захиалах</td>
+                            <td></td>
+                        </tr>`;
+                });
+            }
+
+            // Launch standard browser system print dialogue frames
+            window.print();
+
+            // Revert back safely to paginated view
+            if (currentActiveTab === "inventory") {
+                tableBody.innerHTML = activeInventoryHTML;
+            } else {
+                orderTableBody.innerHTML = activeOrderHTML;
+            }
+
+        } catch (err) {
+            alert("Хэвлэх явцад алдаа гарлаа: " + err.message);
+        } finally {
+            statusBox.innerText = originalStatus;
+            statusBox.style.color = originalColor;
+        }
     }
 
     window.handleAdjust = async function(id, currentStock, inputId, actionIdOrType) {
@@ -405,7 +558,6 @@
         } else {
             if (currentActiveTab === "orders") {
                 fetchOutOfStockItems();
-                updateBadgeCount();
             } else {
                 fetchProducts();
             }
@@ -422,7 +574,6 @@
         const priceValue = parseFloat(priceInput.value);
         const totalVatValue = priceValue * 1.10;
 
-        // Perform server match verification check instantly
         const { data: existingProducts, error: checkError } = await supabaseClient
             .from('products')
             .select('*')
@@ -482,7 +633,6 @@
         }
     });
 
-    // Initial setup launch
     fetchProducts();
 </script>
 
