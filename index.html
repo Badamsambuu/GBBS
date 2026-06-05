@@ -7,28 +7,32 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #1e293b; color: #f8fafc; }
-        .container { max-width: 1200px; margin: 40px auto; background: #0f172a; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; }
-        h2 { text-align: center; color: #38bdf8; margin-top: 0; font-size: 24px; margin-bottom: 20px; }
+        .container { max-width: 1200px; margin: 20px auto; background: #0f172a; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; position: relative; }
+        
+        /* NEW: Header layout pushing navigation to the absolute top of the window container */
+        .window-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 15px; margin-bottom: 25px; }
+        h2 { margin: 0; color: #38bdf8; font-size: 24px; }
+        
+        /* NEW: Top Side Window Navigation Tab Button */
+        .nav-tab-btn { background: #f43f5e; color: white; font-weight: bold; padding: 12px 24px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+        .nav-tab-btn:hover { background: #e11d48; }
+        .nav-tab-btn.back-mode { background: #475569; }
+        .nav-tab-btn.back-mode:hover { background: #64748b; }
+        .order-badge { background: white; color: #f43f5e; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 10px; }
+
         #statusBox { padding: 12px; background: #1e293b; margin-bottom: 20px; border-radius: 6px; color: #38bdf8; font-weight: bold; border: 1px solid #334155; text-align: center; }
         
         form { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) auto; gap: 12px; margin-bottom: 25px; }
         input, select { padding: 12px; border-radius: 6px; background: #1e293b; color: white; border: 1px solid #334155; outline: none; font-size: 14px; width: 100%; box-sizing: border-box; }
         input:focus, select:focus { border-color: #38bdf8; }
-        
         input:disabled { background: #1e293b70; color: #94a3b8; border-style: dashed; cursor: not-allowed; }
         
         .submit-btn { background: #10b981; font-weight: bold; cursor: pointer; border: none; padding: 12px 20px; border-radius: 6px; color: white; font-size: 14px; transition: background 0.2s; height: 100%; }
         .submit-btn:hover { background: #059669; }
         
-        /* Updated Search Controls layout with a View Order button */
-        .search-control-wrapper { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
-        .search-input { flex: 1; padding: 12px; background: #0f172a; border: 1px solid #475569; color: #f8fafc; font-size: 15px; border-radius: 6px; }
+        .search-container { margin-bottom: 20px; background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
+        .search-input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #475569; color: #f8fafc; font-size: 15px; border-radius: 6px; }
         
-        /* Order Modal Open Button style */
-        .open-order-btn { background: #f43f5e; color: white; font-weight: bold; padding: 12px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; position: relative; }
-        .open-order-btn:hover { background: #e11d48; }
-        .order-badge { background: white; color: #f43f5e; font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 10px; margin-left: 4px; }
-
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 14px; border-bottom: 1px solid #334155; text-align: left; font-size: 14px; }
         th { background: #334155; color: #38bdf8; font-weight: 600; text-transform: uppercase; font-size: 12px; }
@@ -43,64 +47,62 @@
         
         .out-of-stock { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px; }
 
-        /* NEW: Popup Modal Overlay Style */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: #0f172a; width: 90%; max-width: 900px; max-height: 85vh; overflow-y: auto; padding: 30px; border-radius: 12px; border: 1px solid #f43f5e40; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f43f5e30; padding-bottom: 12px; margin-bottom: 20px; }
-        .modal-title { color: #f43f5e; font-size: 20px; font-weight: bold; margin: 0; }
-        .close-modal-btn { background: #334155; border: none; color: #94a3b8; font-size: 20px; font-weight: bold; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .close-modal-btn:hover { background: #475569; color: white; }
+        /* Sub-page section wrappers */
+        #mainInventoryView { display: block; }
+        #orderListView { display: none; } /* Hidden entirely by default until toggled */
+        
         .order-table th { background: #4c1d95; color: #f472b6; }
+        .subpage-title { color: #f43f5e; margin-top: 0; margin-bottom: 20px; font-size: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📦 Бараа Бүртгэл & Удирдлагын Систем (Supabase)</h2>
+    
+    <div class="window-header">
+        <h2 id="windowTitle">📦 Бараа Бүртгэл & Удирдлага</h2>
+        <button type="button" class="nav-tab-btn" id="viewToggleBtn">
+            📋 Захиалга Хийх Бараанууд <span class="order-badge" id="orderBadgeCount">0</span>
+        </button>
+    </div>
     
     <div id="statusBox">Систем ачаалж байна...</div>
 
-    <form id="productForm">
-        <input type="text" id="pName" placeholder="Барааны нэр" required>
-        <input type="text" id="pType" placeholder="Төрөл" required>
-        <input type="number" id="pCode" placeholder="Код" required>
-        <input type="number" id="pPrice" placeholder="Үнэ (₮)" required>
-        <input type="text" id="pVat" placeholder="Үнэ + НӨАТ (10%)" disabled>
-        <input type="number" id="pStock" placeholder="Тоо ширхэг" required>
-        <button type="submit" class="submit-btn">Нэмэх</button>
-    </form>
+    <div id="mainInventoryView">
+        <form id="productForm">
+            <input type="text" id="pName" placeholder="Барааны нэр" required>
+            <input type="text" id="pType" placeholder="Төрөл" required>
+            <input type="number" id="pCode" placeholder="Код" required>
+            <input type="number" id="pPrice" placeholder="Үнэ (₮)" required>
+            <input type="text" id="pVat" placeholder="Үнэ + НӨАТ (10%)" disabled>
+            <input type="number" id="pStock" placeholder="Тоо ширхэг" required>
+            <button type="submit" class="submit-btn">Нэмэх</button>
+        </form>
 
-    <div class="search-control-wrapper">
-        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Бараа хайх... (Нэр, Төрөл эсвэл Кодоор хайх боломжтой)">
-        <button type="button" class="open-order-btn" id="openModalBtn">
-            📋 Захиалга Харах <span class="order-badge" id="orderBadgeCount">0</span>
-        </button>
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Бараа хайх... (Нэр, Төрөл эсвэл Кодоор хайх боломжтой)">
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Барааны нэр</th>
+                    <th>Төрөл</th>
+                    <th>Код</th>
+                    <th>Нэгж үнэ</th>
+                    <th>Үнэ + НӨАТ</th>
+                    <th>Тоо ширхэг</th>
+                    <th>Тооллого өөрчлөх</th>
+                </tr>
+            </thead>
+            <tbody id="inventoryTableBody">
+                <tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Сервэрээс бараа уншиж байна...</td></tr>
+            </tbody>
+        </table>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Барааны нэр</th>
-                <th>Төрөл</th>
-                <th>Код</th>
-                <th>Нэгж үнэ</th>
-                <th>Үнэ + НӨАТ</th>
-                <th>Тоо ширхэг</th>
-                <th>Тооллого өөрчлөх</th>
-            </tr>
-        </thead>
-        <tbody id="inventoryTableBody">
-            <tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Сервэрээс бараа уншиж байна...</td></tr>
-        </tbody>
-    </table>
-</div>
-
-<div class="modal-overlay" id="orderModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">🚨 Захиалга хийх барааны жагсаалт (Дууссан бараанууд)</h3>
-            <button class="close-modal-btn" id="closeModalBtn">&times;</button>
-        </div>
+    <div id="orderListView">
+        <div class="subpage-title">🚨 Захиалга хийх барааны жагсаалт (Агуулахад дууссан)</div>
         <table class="order-table">
             <thead>
                 <tr>
@@ -117,6 +119,7 @@
             </tbody>
         </table>
     </div>
+
 </div>
 
 <script>
@@ -133,20 +136,37 @@
     const vatInput = document.getElementById('pVat');
     const searchInput = document.getElementById('searchInput');
     
-    // Modal Selectors
-    const orderModal = document.getElementById('orderModal');
-    const openModalBtn = document.getElementById('openModalBtn');
-    const closeModalBtn = document.getElementById('closeModalBtn');
+    // View View Layout Toggling References
+    const mainInventoryView = document.getElementById('mainInventoryView');
+    const orderListView = document.getElementById('orderListView');
+    const viewToggleBtn = document.getElementById('viewToggleBtn');
     const orderBadgeCount = document.getElementById('orderBadgeCount');
+    const windowTitle = document.getElementById('windowTitle');
 
     let allProductsCache = [];
+    let currentActiveTab = "inventory"; // Tracking if user is looking at 'inventory' or 'orders'
 
-    // MODAL POP-OUT INTERACTION HANDLERS
-    openModalBtn.addEventListener('click', () => { orderModal.style.display = 'flex'; });
-    closeModalBtn.addEventListener('click', () => { orderModal.style.display = 'none'; });
-    
-    // Close window if worker clicks outside the inner modal box area
-    window.addEventListener('click', (e) => { if(e.target === orderModal) { orderModal.style.display = 'none'; } });
+    // NEW PAGE TOGGLE LOGIC (Swaps out the entire window context seamlessly)
+    viewToggleBtn.addEventListener('click', () => {
+        if (currentActiveTab === "inventory") {
+            // Turn window into Order sub-page layout
+            mainInventoryView.style.display = "none";
+            orderListView.style.display = "block";
+            windowTitle.innerText = "🚨 Агуулахын Захиалгууд";
+            viewToggleBtn.innerHTML = `⬅️ Үндсэн цэс рүү буцах`;
+            viewToggleBtn.classList.add("back-mode");
+            currentActiveTab = "orders";
+        } else {
+            // Turn window back into Active Inventory table view
+            orderListView.style.display = "none";
+            mainInventoryView.style.display = "block";
+            windowTitle.innerText = "📦 Бараа Бүртгэл & Удирдлага";
+            viewToggleBtn.innerHTML = `📋 Захиалга Хийх Бараанууд <span class="order-badge" id="orderBadgeCount">${orderBadgeCount.innerText}</span>`;
+            viewToggleBtn.classList.remove("back-mode");
+            currentActiveTab = "inventory";
+            fetchProducts(); // Refresh listings automatically
+        }
+    });
 
     priceInput.addEventListener('input', () => {
         const price = parseFloat(priceInput.value);
@@ -235,8 +255,11 @@
         orderTableBody.innerHTML = '';
         const outOfStockItems = allProducts.filter(p => parseInt(p['Барааны тооллого'] || 0) <= 0);
         
-        // Dynamic Badge indicator sync
-        orderBadgeCount.innerText = outOfStockItems.length;
+        // Sync badge counter number dynamically
+        const badgeElement = document.getElementById('orderBadgeCount');
+        if (badgeElement) {
+            badgeElement.innerText = outOfStockItems.length;
+        }
         
         if (outOfStockItems.length === 0) {
             orderTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>';
