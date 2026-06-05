@@ -423,48 +423,72 @@
         fetchOutOfStockItems();
     }
 
-    // BACKGROUND PRINTING LOGIC (Fetches unlimited database items directly to physical paper format)
+    // ADVANCED CHUNKED BATCHING LOGIC - Overcomes Supabase 1,000 item API protection limit
     window.printCompleteList = async function() {
         const originalStatus = statusBox.innerText;
         const originalColor = statusBox.style.color;
         
         try {
             statusBox.style.color = "#e11d48";
-            statusBox.innerText = "🖨️ Хэвлэх файл бэлдэж байна... Бүх өгөгдлийг сервэрээс татаж байна...";
+            statusBox.innerText = "🖨️ Хэвлэх файл бэлдэж байна... Өгөгдлийг багцаар татаж байна...";
 
             let allPrintData = [];
-            let errorOccurred = false;
+            let hasMore = true;
+            let offset = 0;
+            const batchSize = 1000; // Optimal batch size block limit
 
-            if (currentActiveTab === "inventory") {
-                const searchQuery = searchInput.value.trim();
-                let query = supabaseClient.from('products').select('*');
+            while (hasMore) {
+                let currentBatchData = [];
+                let errorOccurred = null;
 
-                if (searchQuery !== "") {
-                    if (!isNaN(searchQuery)) {
-                        query = query.eq('код', parseFloat(searchQuery));
-                    } else {
-                        query = query.or(`"Барааны нэр".ilike.%${searchQuery}%,Төрөл.ilike.%${searchQuery}%,Байршил.ilike.%${searchQuery}%`);
+                if (currentActiveTab === "inventory") {
+                    const searchQuery = searchInput.value.trim();
+                    let query = supabaseClient.from('products').select('*');
+
+                    if (searchQuery !== "") {
+                        if (!isNaN(searchQuery)) {
+                            query = query.eq('код', parseFloat(searchQuery));
+                        } else {
+                            query = query.or(`"Барааны нэр".ilike.%${searchQuery}%,Төрөл.ilike.%${searchQuery}%,Байршил.ilike.%${searchQuery}%`);
+                        }
                     }
-                }
-                
-                const { data, error } = await query.order('id', { ascending: false });
-                if (error) errorOccurred = error.message;
-                else allPrintData = data;
-
-            } else {
-                const { data, error } = await supabaseClient
-                    .from('products')
-                    .select('*')
-                    .lte('Барааны тооллого', 0)
-                    .order('id', { ascending: false });
                     
-                if (error) errorOccurred = error.message;
-                else allPrintData = data;
-            }
+                    const { data, error } = await query
+                        .order('id', { ascending: false })
+                        .range(offset, offset + batchSize - 1);
+                        
+                    if (error) errorOccurred = error.message;
+                    else currentBatchData = data;
 
-            if (errorOccurred) {
-                alert("Хэвлэх өгөгдөл татахад алдаа гарлаа: " + errorOccurred);
-                return;
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('products')
+                        .select('*')
+                        .lte('Барааны тооллого', 0)
+                        .order('id', { ascending: false })
+                        .range(offset, offset + batchSize - 1);
+                        
+                    if (error) errorOccurred = error.message;
+                    else currentBatchData = data;
+                }
+
+                if (errorOccurred) {
+                    alert("Хэвлэх өгөгдөл татахад алдаа гарлаа: " + errorOccurred);
+                    return;
+                }
+
+                if (currentBatchData && currentBatchData.length > 0) {
+                    allPrintData = allPrintData.concat(currentBatchData);
+                    offset += batchSize;
+                    statusBox.innerText = `🖨️ Өгөгдөл татаж байна... (${allPrintData.length} бараа уншлаа)`;
+                    
+                    // If the response is smaller than the requested batch size, we reached the end
+                    if (currentBatchData.length < batchSize) {
+                        hasMore = false;
+                    }
+                } else {
+                    hasMore = false;
+                }
             }
 
             const activeInventoryHTML = tableBody.innerHTML;
@@ -503,10 +527,10 @@
                 });
             }
 
-            // Launch standard browser system print dialogue frames
+            // Launch standard browser system print frames
             window.print();
 
-            // Revert back safely to paginated view
+            // Revert layout cleanly back to the active page window
             if (currentActiveTab === "inventory") {
                 tableBody.innerHTML = activeInventoryHTML;
             } else {
