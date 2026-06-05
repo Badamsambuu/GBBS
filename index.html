@@ -9,20 +9,25 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #1e293b; color: #f8fafc; }
         .container { max-width: 1300px; margin: 20px auto; background: #0f172a; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; position: relative; }
         
-        .window-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 15px; margin-bottom: 25px; }
-        h2 { margin: 0; color: #38bdf8; font-size: 24px; }
+        .window-header { display: flex; flex-direction: column; gap: 15px; border-bottom: 2px solid #334155; padding-bottom: 20px; margin-bottom: 25px; }
+        h2 { margin: 0; color: #38bdf8; font-size: 26px; text-align: center; }
         
-        .nav-tab-btn { background: #f43f5e; color: white; font-weight: bold; padding: 12px 24px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
-        .nav-tab-btn:hover { background: #e11d48; }
-        .nav-tab-btn.order-mode { background: #f43f5e; }
-        .nav-tab-btn.intake-mode { background: #0284c7; }
-        .nav-tab-btn.back-mode { background: #475569; }
-        .nav-tab-btn.back-mode:hover { background: #64748b; }
-        .order-badge { background: white; color: #f43f5e; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 10px; }
+        /* 3 Main Option Buttons Group */
+        .main-navigation { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; }
+        .nav-tab-btn { padding: 15px; border-radius: 8px; border: none; font-weight: bold; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; background: #334155; color: #94a3b8; }
+        .nav-tab-btn:hover { background: #475569; color: white; }
+        
+        /* Active Tab Styling */
+        .nav-tab-btn.active[data-target="inventory"] { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+        .nav-tab-btn.active[data-target="intake"] { background: #0284c7; color: white; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3); }
+        .nav-tab-btn.active[data-target="orders"] { background: #f43f5e; color: white; box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3); }
+        
+        .order-badge { background: white; color: #f43f5e; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 10px; margin-left: 4px; }
+        .nav-tab-btn.active .order-badge { color: #f43f5e; background: white; }
 
         .print-action-bar { display: flex; justify-content: flex-end; margin-bottom: 15px; margin-top: 10px; }
-        .print-btn { background: #2563eb; color: white; font-weight: bold; padding: 12px 24px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
-        .print-btn:hover { background: #1d4ed8; }
+        .print-btn { background: #10b981; color: white; font-weight: bold; padding: 12px 24px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+        .print-btn:hover { background: #059669; }
 
         #statusBox { padding: 12px; background: #1e293b; margin-bottom: 20px; border-radius: 6px; color: #38bdf8; font-weight: bold; border: 1px solid #334155; text-align: center; }
         
@@ -64,13 +69,14 @@
         
         .out-of-stock { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px; }
 
+        /* Hidden Content Views by default */
         #mainInventoryView { display: block; }
         #orderListView { display: none; }
         #intakeListView { display: none; }
         
         .order-table th { background: #4c1d95; color: #f472b6; }
-        .subpage-title { color: #f43f5e; margin-top: 0; margin-bottom: 20px; font-size: 20px; font-weight: bold; }
-        .intake-title { color: #38bdf8; }
+        .subpage-title { color: #38bdf8; margin-top: 0; margin-bottom: 20px; font-size: 20px; font-weight: bold; }
+        .order-title { color: #f43f5e; }
 
         .pagination-container { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px; padding-top: 15px; border-top: 1px solid #334155; }
         .page-btn { background: #334155; color: white; border: 1px solid #475569; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background 0.2s; }
@@ -81,7 +87,7 @@
         @media print {
             body { background: white !important; color: black !important; padding: 0 !important; }
             .container { max-width: 100% !important; border: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; }
-            .window-header, form, .intake-form, .search-container, .pagination-container, #statusBox, .action-container, .print-action-bar, .suggest-box, th:last-child, td:last-child { display: none !important; }
+            .window-header, .main-navigation, form, .intake-form, .search-container, .pagination-container, #statusBox, .action-container, .print-action-bar, .suggest-box, th:last-child, td:last-child { display: none !important; }
             table { width: 100% !important; margin-top: 20px !important; border: 1px solid #000 !important; }
             th, td { border-bottom: 1px solid #000 !important; color: black !important; padding: 8px !important; font-size: 12px !important; }
             th { background: #eaeaea !important; color: black !important; }
@@ -95,15 +101,27 @@
 <div class="container">
     
     <div class="window-header">
-        <h2 id="windowTitle">📦 Бараа Бүртгэл & Удирдлага</h2>
-        <button type="button" class="nav-tab-btn" id="viewToggleBtn">
-            📋 Захиалга Хийх Бараанууд <span class="order-badge" id="orderBadgeCount">0</span>
-        </button>
+        <h2>📦 Бараа Бүртгэл & Агуулахын Систем</h2>
+        
+        <!-- 3 OPTIONS MENU LAYOUT NAVIGATION -->
+        <div class="main-navigation">
+            <button type="button" class="nav-tab-btn active" data-target="inventory">
+                🔍 Бараа хайх & Бүртгэх
+            </button>
+            <button type="button" class="nav-tab-btn" data-target="intake">
+                📥 Шинэ бараа таталт (Batch)
+            </button>
+            <button type="button" class="nav-tab-btn" data-target="orders">
+                🚨 Дууссан бараанууд <span class="order-badge" id="orderBadgeCount">0</span>
+            </button>
+        </div>
     </div>
     
     <div id="statusBox">Систем ачаалж байна...</div>
 
+    <!-- OPTION 1: MAIN INVENTORY VIEW (SEARCH & REGISTER) -->
     <div id="mainInventoryView">
+        <div class="subpage-title">🔍 Барааны нэгдсэн хайлт болон шинээр бүртгэх</div>
         <form id="productForm">
             <input type="text" id="pName" placeholder="Барааны нэр" required>
             <input type="text" id="pType" placeholder="Төрөл" required>
@@ -147,6 +165,7 @@
             </tbody>
         </table>
 
+        <!-- STRICT 50 ROW PAGINATION -->
         <div class="pagination-container">
             <button class="page-btn" id="prevPageBtn" onclick="changePage(-1)">⬅️ Өмнөх</button>
             <span class="page-indicator" id="pageIndicator">Хуудас 1 / 1</span>
@@ -154,39 +173,9 @@
         </div>
     </div>
 
-    <div id="orderListView">
-        <div class="subpage-title">🚨 Захиалга хийх барааны жагсаалт (Агуулахад дууссан)</div>
-        
-        <div class="print-action-bar">
-            <button type="button" class="print-btn" onclick="printCompleteList()">🖨️ Захиалгын хуудсыг хэвлэх</button>
-        </div>
-
-        <table class="order-table">
-            <thead>
-                <tr>
-                    <th>Барааны нэр</th>
-                    <th>Төрөл</th>
-                    <th>Код</th>
-                    <th>Байршил</th>
-                    <th>Үнэ + НӨАТ</th>
-                    <th>Төлөв</th>
-                    <th>Шинээр захиалга авах</th>
-                </tr>
-            </thead>
-            <tbody id="orderTableBody">
-                <tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>
-            </tbody>
-        </table>
-
-        <div class="pagination-container">
-            <button class="page-btn" id="orderPrevPageBtn" onclick="changeOrderPage(-1)">⬅️ Өмнөх</button>
-            <span class="page-indicator" id="orderPageIndicator">Хуудас 1 / 1</span>
-            <button class="page-btn" id="orderNextPageBtn" onclick="changeOrderPage(1)">Дараах ➡️</button>
-        </div>
-    </div>
-
+    <!-- OPTION 2: SAME LAYOUT INTAKE (NEW BATCH) -->
     <div id="intakeListView">
-        <div class="subpage-title intake-title">📥 Шинээр бараа татан авалт (Багцаар хадгалах)</div>
+        <div class="subpage-title">📥 Шинээр бараа татан авалт хийх (Багцаар нэмэх)</div>
         
         <div class="intake-form">
             <div>
@@ -199,7 +188,8 @@
                 </select>
             </div>
             <div style="grid-column: span 2; position: relative;">
-                <input type="text" id="intakeSearchInput" class="search-input" style="background:#1e293b; margin:0;" placeholder="🔍 Барааны код эсвэл нэр бичиж хайх...">
+                <input type="text" id="intakeSearchInput" class="search-input" style="background:#1e293b; margin:0;" placeholder="🔍 Татах барааны код эсвэл нэрийг бичиж хайх...">
+                <!-- Pop-out auto suggested items dropdown -->
                 <div class="suggest-box" id="suggestBox"></div>
             </div>
         </div>
@@ -227,6 +217,39 @@
         </div>
     </div>
 
+    <!-- OPTION 3: OUT OF STOCK PRODUCTS VIEW -->
+    <div id="orderListView">
+        <div class="subpage-title order-title">🚨 Захиалга хийх шаардлагатай бараанууд (Дууссан буюу 0 үлдэгдэлтэй)</div>
+        
+        <div class="print-action-bar">
+            <button type="button" class="print-btn" style="background:#f43f5e;" onclick="printCompleteList()">🖨️ Захиалгын хуудсыг хэвлэх</button>
+        </div>
+
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>Барааны нэр</th>
+                    <th>Төрөл</th>
+                    <th>Код</th>
+                    <th>Байршил</th>
+                    <th>Үнэ + НӨАТ</th>
+                    <th>Төлөв</th>
+                    <th>Шинээр захиалга авах</th>
+                </tr>
+            </thead>
+            <tbody id="orderTableBody">
+                <tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>
+            </tbody>
+        </table>
+
+        <!-- STRICT 50 ROW PAGINATION FOR ORDERS -->
+        <div class="pagination-container">
+            <button class="page-btn" id="orderPrevPageBtn" onclick="changeOrderPage(-1)">⬅️ Өмнөх</button>
+            <span class="page-indicator" id="orderPageIndicator">Хуудас 1 / 1</span>
+            <button class="page-btn" id="orderNextPageBtn" onclick="changeOrderPage(1)">Дараах ➡️</button>
+        </div>
+    </div>
+
 </div>
 
 <script>
@@ -249,53 +272,48 @@
     const mainInventoryView = document.getElementById('mainInventoryView');
     const orderListView = document.getElementById('orderListView');
     const intakeListView = document.getElementById('intakeListView');
-    const viewToggleBtn = document.getElementById('viewToggleBtn');
     const orderBadgeCount = document.getElementById('orderBadgeCount');
-    const windowTitle = document.getElementById('windowTitle');
 
     let currentPage = 1;
     let currentOrderPage = 1;
-    const rowsPerPage = 50; 
+    const rowsPerPage = 50; // Keep exactly 50 row layout
     let currentActiveTab = "inventory"; 
     let searchTimeout = null;
     let intakeSearchTimeout = null;
 
-    // Array to store active batch items locally before sending them to Supabase
     let localBatchList = [];
 
     document.getElementById('intakeDate').valueAsDate = new Date();
 
-    viewToggleBtn.addEventListener('click', () => {
-        if (currentActiveTab === "inventory") {
+    // 3 Options Tab Switcher Logic
+    document.querySelectorAll('.nav-tab-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            // Remove active classes
+            document.querySelectorAll('.nav-tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Add active class to clicked button
+            const target = button.getAttribute('data-target');
+            button.classList.add('active');
+            currentActiveTab = target;
+
+            // Toggle corresponding views
             mainInventoryView.style.display = "none";
-            orderListView.style.display = "block";
             intakeListView.style.display = "none";
-            windowTitle.innerText = "🚨 Агуулахын Захиалгууд";
-            viewToggleBtn.innerHTML = `📦 Бараа таталт руу шилжих`;
-            viewToggleBtn.className = "nav-tab-btn intake-mode";
-            currentActiveTab = "orders";
-            currentOrderPage = 1; 
-            fetchOutOfStockItems();
-        } else if (currentActiveTab === "orders") {
-            mainInventoryView.style.display = "none";
             orderListView.style.display = "none";
-            intakeListView.style.display = "block";
-            windowTitle.innerText = "📥 Бараа татан авалтын хэсэг";
-            viewToggleBtn.innerHTML = `⬅️ Үндсэн цэс рүү буцах`;
-            viewToggleBtn.className = "nav-tab-btn back-mode";
-            currentActiveTab = "intake";
-            renderLocalBatchTable();
-        } else {
-            orderListView.style.display = "none";
-            intakeListView.style.display = "none";
-            mainInventoryView.style.display = "block";
-            windowTitle.innerText = "📦 Бараа Бүртгэл & Удирдлага";
-            viewToggleBtn.innerHTML = `📋 Захиалга Хийх Бараанууд <span class="order-badge" id="orderBadgeCount">0</span>`;
-            viewToggleBtn.className = "nav-tab-btn";
-            currentActiveTab = "inventory";
-            currentPage = 1; 
-            fetchProducts(); 
-        }
+
+            if (target === "inventory") {
+                mainInventoryView.style.display = "block";
+                currentPage = 1;
+                fetchProducts();
+            } else if (target === "intake") {
+                intakeListView.style.display = "block";
+                renderLocalBatchTable();
+            } else if (target === "orders") {
+                orderListView.style.display = "block";
+                currentOrderPage = 1;
+                fetchOutOfStockItems();
+            }
+        });
     });
 
     priceInput.addEventListener('input', () => {
@@ -316,7 +334,7 @@
         }, 300);
     });
 
-    // AUTO-SUGGEST POP OUT LOGIC FOR STOCK INTAKE TAB
+    // Auto-Suggest Dynamic Search Logic for Intake (Option 2)
     intakeSearchInput.addEventListener('input', () => {
         clearTimeout(intakeSearchTimeout);
         const searchVal = intakeSearchInput.value.trim();
@@ -347,7 +365,6 @@
                     item.className = "suggest-item";
                     item.innerHTML = `<strong>${product['Барааны нэр']}</strong> <span>Код: ${product['код']} | Үлдэгдэл: ${product['Барааны тооллого']} ш</span>`;
                     
-                    // Click listener to add selected pop-out item directly to the batch queue list
                     item.addEventListener('click', () => {
                         addItemToBatch(product);
                         suggestBox.style.display = "none";
@@ -362,23 +379,19 @@
         }, 200);
     });
 
-    // Hide suggestions box if clicking outside search box layout
     document.addEventListener('click', (e) => {
         if (e.target !== intakeSearchInput) {
             suggestBox.style.display = "none";
         }
     });
 
-    // Push product to local array queue memory
     function addItemToBatch(product) {
-        // Prevent duplicate items inside the same active lineup
         const isDuplicate = localBatchList.some(item => item.id === product.id);
         if (isDuplicate) {
             alert("Энэ бараа түр жагсаалтад аль хэдийн нэмэгдсэн байна!");
             return;
         }
 
-        // Add item with a default intake quantity of 10
         localBatchList.push({
             ...product,
             intakeAmount: 10
@@ -386,13 +399,11 @@
         renderLocalBatchTable();
     }
 
-    // Remove item from batch list array
     window.removeBatchItem = function(index) {
         localBatchList.splice(index, 1);
         renderLocalBatchTable();
     }
 
-    // Keep change amount track input updated inside state object
     window.updateBatchQty = function(index, value) {
         const parsed = parseInt(value);
         if(!isNaN(parsed) && parsed > 0) {
@@ -400,7 +411,6 @@
         }
     }
 
-    // Render local lineup array list underneath input grid sheet layout
     function renderLocalBatchTable() {
         intakeTableBody.innerHTML = '';
         const submitBtnContainer = document.getElementById('submitAllContainer');
@@ -434,7 +444,6 @@
         });
     }
 
-    // SAVE THE COMPLETED BATCH INTAKE ARRAY TO REMOTE SUPABASE INSTANCE
     window.saveWholeBatchToDatabase = async function() {
         if(localBatchList.length === 0) return;
 
@@ -455,19 +464,18 @@
 
             if(error) {
                 errorsOccurred++;
-                console.error(`Error saving item ID ${item.id}:`, error.message);
             }
         }
 
         if(errorsOccurred > 0) {
             statusBox.style.color = "#ef4444";
             statusBox.innerText = `⚠️ Таталтыг хадгалахад ${errorsOccurred} алдаа гарлаа!`;
-            alert("Зарим барааг хадгалахад алдаа гарлаа. Консол шалгана уу.");
+            alert("Зарим барааг хадгалахад алдаа гарлаа.");
         } else {
             statusBox.style.color = "#10b981";
-            statusBox.innerText = `🎉 Багц таталт амжилттай бүртгэгдлээ! Нийт ${localBatchList.length} бараа шинэчлэгдэв.`;
+            statusBox.innerText = `🎉 Багц таталт амжилттай бүртгэгдлээ!`;
             alert(`Амжилттай! ${localBatchList.length} барааны тооллогыг баазад нэмж хадгаллаа.`);
-            localBatchList = []; // Reset storage lineup container
+            localBatchList = [];
             renderLocalBatchTable();
             updateBadgeCount();
         }
@@ -482,9 +490,7 @@
             const startIndex = (currentPage - 1) * rowsPerPage;
             const endIndex = startIndex + rowsPerPage - 1;
 
-            let query = supabaseClient
-                .from('products')
-                .select('*', { count: 'exact' });
+            let query = supabaseClient.from('products').select('*', { count: 'exact' });
 
             if (searchQuery !== "") {
                 if (!isNaN(searchQuery)) {
@@ -654,7 +660,7 @@
         fetchOutOfStockItems();
     }
 
-    // UNLIMITED CURSOR KEY PAGINATION PRINT ENGINE (Circumvents the 1,000 item limit)
+    // Print Logic (Maintains 50 row pagination screen view integrity but pulls all for papers)
     window.printCompleteList = async function() {
         const originalStatus = statusBox.innerText;
         const originalColor = statusBox.style.color;
@@ -688,9 +694,7 @@
                     query = query.lt('id', lastIdCursor);
                 }
 
-                const { data, error } = await query
-                    .order('id', { ascending: false })
-                    .limit(pageSizeLimit);
+                const { data, error } = await query.order('id', { ascending: false }).limit(pageSizeLimit);
 
                 if (error) {
                     alert("Мэдээлэл татахад алдаа гарлаа: " + error.message);
@@ -700,11 +704,7 @@
                 if (data && data.length > 0) {
                     allPrintData = allPrintData.concat(data);
                     lastIdCursor = data[data.length - 1].id; 
-                    statusBox.innerText = `🖨️ Ачаалж байна... (${allPrintData.length} бараа уншлаа)`;
-                    
-                    if (data.length < pageSizeLimit) {
-                        hasMore = false; 
-                    }
+                    if (data.length < pageSizeLimit) hasMore = false; 
                 } else {
                     hasMore = false;
                 }
@@ -874,6 +874,7 @@
         }
     });
 
+    // Initial load
     fetchProducts();
 </script>
 
