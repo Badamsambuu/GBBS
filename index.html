@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Бараа Удирдах Систем</title>
-    <!-- Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #1e293b; color: #f8fafc; }
@@ -71,7 +70,6 @@
     
     <div id="statusBox">Систем ачаалж байна...</div>
 
-    <!-- ================= SUB-PAGE 1: MAIN ACTIVE INVENTORY SCREEN ================= -->
     <div id="mainInventoryView">
         <form id="productForm">
             <input type="text" id="pName" placeholder="Барааны нэр" required>
@@ -81,7 +79,6 @@
             <input type="text" id="pVat" placeholder="Үнэ + НӨАТ (10%)" disabled>
             <input type="number" id="pStock" placeholder="Тоо ширхэг" required>
             
-            <!-- FIXED SELECTOR: The text parenthetical prompt has been removed -->
             <select id="pLoc" required>
                 <option value="" disabled selected>Байршил сонгох...</option>
                 <option value="Монос">Монос</option>
@@ -114,7 +111,6 @@
         </table>
     </div>
 
-    <!-- ================= SUB-PAGE 2: THE WHOLE WINDOW ORDER VIEW ================= -->
     <div id="orderListView">
         <div class="subpage-title">🚨 Захиалга хийх барааны жагсаалт (Агуулахад дууссан)</div>
         <table class="order-table">
@@ -291,7 +287,7 @@
                     <td><strong style="color: #f43f5e;">${product['Барааны нэр'] || '—'}</strong></td>
                     <td><span>${product['Төрөл'] || '—'}</span></td>
                     <td><code>${product['код'] || '0'}</code></td>
-                    <td>${getLocationBadgeMarkup(product['Байrшил'])}</td>
+                    <td>${getLocationBadgeMarkup(product['Байршил'])}</td>
                     <td>${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
                     <td><span class="out-of-stock" style="background: rgba(244, 63, 94, 0.15)">⚠️ Захиалах</span></td>
                     <td>
@@ -345,32 +341,72 @@
         }
     }
 
+    // UPDATED SMART SUBMIT LOGIC
     productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        statusBox.innerText = "Хадгалж байна...";
+        statusBox.innerText = "Шалгаж байна...";
         
+        const inputCode = parseFloat(document.getElementById('pCode').value);
+        const inputLocation = document.getElementById('pLoc').value;
+        const additionalStock = parseInt(document.getElementById('pStock').value);
         const priceValue = parseFloat(priceInput.value);
         const totalVatValue = priceValue * 1.10;
-        
-        const payload = {
-            'id': Math.floor(10000000 + Math.random() * 90000000), 
-            'Барааны нэр': document.getElementById('pName').value,
-            'Төрөл': document.getElementById('pType').value,
-            'код': parseFloat(document.getElementById('pCode').value), 
-            'нэгж үнэ': priceValue,
-            'НӨАТ': totalVatValue, 
-            'Барааны тооллого': parseInt(document.getElementById('pStock').value),
-            'Байршил': document.getElementById('pLoc').value
-        };
 
-        const { error } = await supabaseClient.from('products').insert([payload]);
-        if (error) {
-            alert("Алдаа гарлаа: " + error.message);
-            statusBox.innerText = "Алдаа: " + error.message;
+        // Step 1: Check if this item code already exists at this exact warehouse location
+        const existingProduct = allProductsCache.find(product => 
+            parseFloat(product['код']) === inputCode && 
+            product['Байршил'] === inputLocation
+        );
+
+        if (existingProduct) {
+            // Match found! Let's update the existing row instead of adding a new one
+            statusBox.innerText = "Ижил бараа олдлоо. Тооллогыг нэмэгдүүлж байна...";
+            
+            const currentStock = parseInt(existingProduct['Барааны тооллого'] || 0);
+            const newStock = currentStock + additionalStock;
+
+            const { error } = await supabaseClient
+                .from('products')
+                .update({ 
+                    'Барааны тооллого': newStock,
+                    // Optionally update pricing info too if it changed
+                    'нэгж үнэ': priceValue,
+                    'НӨАТ': totalVatValue
+                })
+                .eq('id', existingProduct.id);
+
+            if (error) {
+                alert("Алдаа гарлаа: " + error.message);
+                statusBox.innerText = "Алдаа: " + error.message;
+            } else {
+                productForm.reset();
+                vatInput.value = ""; 
+                fetchProducts(); 
+            }
         } else {
-            productForm.reset();
-            vatInput.value = ""; 
-            fetchProducts(); 
+            // No match found! Create a new row product item entirely
+            statusBox.innerText = "Шинэ бараа хадгалж байна...";
+            
+            const payload = {
+                'id': Math.floor(10000000 + Math.random() * 90000000), 
+                'Барааны нэр': document.getElementById('pName').value,
+                'Төрөл': document.getElementById('pType').value,
+                'код': inputCode, 
+                'нэгж үнэ': priceValue,
+                'НӨАТ': totalVatValue, 
+                'Барааны тооллого': additionalStock,
+                'Байршил': inputLocation
+            };
+
+            const { error } = await supabaseClient.from('products').insert([payload]);
+            if (error) {
+                alert("Алдаа гарлаа: " + error.message);
+                statusBox.innerText = "Алдаа: " + error.message;
+            } else {
+                productForm.reset();
+                vatInput.value = ""; 
+                fetchProducts(); 
+            }
         }
     });
 
