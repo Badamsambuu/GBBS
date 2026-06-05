@@ -161,4 +161,74 @@
                     <td><strong>${product['Барааны нэр'] || '—'}</strong></td>
                     <td><span style="color: #94a3b8;">${product['Төрөл'] || '—'}</span></td>
                     <td><code>${product['код'] || '0'}</code></td>
-                    <td style="color: #4ade80; font-weight: bold;">${Number(product['нэгж үнэ'] || 0).toLocaleString()}
+                    <td style="color: #4ade80; font-weight: bold;">${Number(product['нэгж үнэ'] || 0).toLocaleString()} ₮</td>
+                    <td style="color: #f39c12; font-weight: bold;">${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
+                    <td>${stockDisplay}</td>
+                    <td>
+                        <div class="action-container">
+                            <button class="minus-btn" ${isMinusDisabled} onclick="updateStockCount(${product.id}, ${currentStock}, -1)">
+                                Зарсан (-1)
+                            </button>
+                            <button class="plus-btn" onclick="updateStockCount(${product.id}, ${currentStock}, 1)">
+                                Нэмэх (+1)
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
+        });
+    }
+
+    productForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        statusBox.innerText = "Хадгалж байна...";
+        
+        const priceValue = parseFloat(priceInput.value);
+        const totalVatValue = priceValue * 1.10;
+        
+        const payload = {
+            'id': Math.floor(10000000 + Math.random() * 90000000), 
+            'Барааны нэр': document.getElementById('pName').value,
+            'Төрөл': document.getElementById('pType').value,
+            'код': parseFloat(document.getElementById('pCode').value), 
+            'нэгж үнэ': priceValue,
+            'НӨАТ': totalVatValue, 
+            'Барааны тооллого': parseInt(document.getElementById('pStock').value)
+        };
+
+        const { error } = await supabaseClient.from('products').insert([payload]);
+        if (error) {
+            alert("Алдаа гарлаа: " + error.message);
+            statusBox.innerText = "Алдаа: " + error.message;
+        } else {
+            productForm.reset();
+            vatInput.value = ""; 
+            fetchProducts(); 
+        }
+    });
+
+    // UPDATED UNIVERSAL STOCK HANDLER: Handles both additions and subtractions safely
+    window.updateStockCount = async function(id, currentStock, amount) {
+        const newStock = currentStock + amount;
+        if (newStock < 0) return; // Prevent negative stock numbers completely
+        
+        statusBox.innerText = "Тооллого шинэчилж байна...";
+
+        const { error } = await supabaseClient
+            .from('products')
+            .update({ 'Барааны тооллого': newStock })
+            .eq('id', id);
+
+        if (error) {
+            alert("Алдаа гарлаа: " + error.message);
+        } else {
+            fetchProducts(); // Refresh layout updates instantly across devices
+        }
+    }
+
+    fetchProducts();
+</script>
+
+</body>
+</html>
