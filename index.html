@@ -96,7 +96,7 @@
         </form>
 
         <div class="search-container">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Бараа хайх... (Нэр, Төрөл, Код эсвэл 'Монос', '22' гэж шүүх боломжтой)">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Бараа хайх... (Нэр, Төрөл эсвэл Кодоор шүүнэ)">
         </div>
 
         <table>
@@ -166,12 +166,11 @@
     const orderBadgeCount = document.getElementById('orderBadgeCount');
     const windowTitle = document.getElementById('windowTitle');
 
-    // Pagination State Configuration Variables
-    let allProductsCache = [];
-    let activeFilteredProducts = [];
+    // Server-side Pagination Configuration state Variables
     let currentPage = 1;
     const rowsPerPage = 50; 
     let currentActiveTab = "inventory";
+    let searchTimeout = null;
 
     viewToggleBtn.addEventListener('click', () => {
         if (currentActiveTab === "inventory") {
@@ -181,6 +180,7 @@
             viewToggleBtn.innerHTML = `⬅️ Үндсэн цэс рүү буцах`;
             viewToggleBtn.classList.add("back-mode");
             currentActiveTab = "orders";
+            fetchOutOfStockItems();
         } else {
             orderListView.style.display = "none";
             mainInventoryView.style.display = "block";
@@ -202,73 +202,84 @@
         }
     });
 
+    // Debounced Search Input handler to prevent rapid query spamming
     searchInput.addEventListener('input', () => {
-        const query = searchInput.value.toLowerCase().trim();
-        activeFilteredProducts = allProductsCache.filter(product => {
-            const name = (product['Барааны нэр'] || '').toLowerCase();
-            const type = (product['Төрөл'] || '').toLowerCase();
-            const code = String(product['код'] || '').toLowerCase();
-            const loc = (product['Байршил'] || '').toLowerCase();
-            return name.includes(query) || type.includes(query) || code.includes(query) || loc.includes(query);
-        });
-        currentPage = 1; // Reset to page 1 on active string search
-        renderTable(activeFilteredProducts);
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            currentPage = 1; 
+            fetchProducts();
+        }, 300); // 300ms debounce window
     });
 
-    // FIX: Sequentially fetches chunks of 1000 items until database limit is cleared
     async function fetchProducts() {
         try {
             statusBox.style.color = "#38bdf8";
-            statusBox.innerText = "Сервэрээс өгөгдөл татаж байна...";
-            
-            let allData = [];
-            let from = 0;
-            let to = 999;
-            let hasMore = true;
-            const pageSize = 1000;
+            statusBox.innerText = "Уншиж байна...";
 
-            while (hasMore) {
-                const { data, error } = await supabaseClient
-                    .from('products')
-                    .select('*')
-                    .order('id', { ascending: false })
-                    .range(from, to);
+            const searchQuery = searchInput.value.trim();
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage - 1;
 
-                if (error) {
-                    statusBox.style.color = "#ef4444";
-                    statusBox.innerText = "Алдаа: " + error.message;
-                    return;
-                }
+            // Start building query
+            let query = supabaseClient
+                .from('products')
+                .select('*', { count: 'exact' }); // Requests total count of matches dynamically
 
-                if (data && data.length > 0) {
-                    allData = allData.concat(data);
-                    if (data.length < pageSize) {
-                        hasMore = false;
-                    } else {
-                        from += pageSize;
-                        to += pageSize;
-                    }
+            // Apply Server-Side filter matches if query is active
+            if (searchQuery !== "") {
+                if (!isNaN(searchQuery)) {
+                    query = query.eq('код', parseFloat(searchQuery));
                 } else {
-                    hasMore = false;
+                    query = query.or(`"Барааны нэр".ilike.%${searchQuery}%,Төрөл.ilike.%${searchQuery}%,Байршил.ilike.%${searchQuery}%`);
                 }
             }
 
-            statusBox.style.color = "#38bdf8";
-            statusBox.innerText = "Холболт амжилттай! Нийт бараа: " + allData.length;
-            
-            allProductsCache = allData;
-            activeFilteredProducts = [...allProductsCache];
-            
-            if(searchInput.value.trim() !== "") {
-                searchInput.dispatchEvent(new Event('input'));
-            } else {
-                renderTable(activeFilteredProducts);
+            // Apply server order boundaries and specific page index constraints
+            const { data, error, count } = await query
+                .order('id', { ascending: false })
+                .range(startIndex, endIndex);
+                
+            if (error) {
+                statusBox.style.color = "#ef4444";
+                statusBox.innerText = "Алдаа: " + error.message;
+                return;
             }
-            renderOrderTable(allProductsCache);
+
+            statusBox.innerText = "Систем бэлэн. Нийт шүүгдсэн бараа: " + (count || 0);
+            renderTable(data || [], count || 0);
+            
+            // Silently update out-of-stock count badge in the background
+            updateBadgeCount();
         } catch (err) {
             statusBox.style.color = "#ef4444";
             statusBox.innerText = "Алдаа гарлаа: " + err.message;
         }
+    }
+
+    async function updateBadgeCount() {
+        const { count } = await supabaseClient
+            .from('products')
+            .select('*', { count: 'exact', head: true })
+            .lte('Барааны тооллого', 0);
+        
+        if (orderBadgeCount) {
+            orderBadgeCount.innerText = count || 0;
+        }
+    }
+
+    async function fetchOutOfStockItems() {
+        orderTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Захиалгуудыг ачаалж байна...</td></tr>';
+        const { data, error } = await supabaseClient
+            .from('products')
+            .select('*')
+            .lte('Барааны тооллого', 0)
+            .order('id', { ascending: false });
+
+        if (error) {
+            alert("Захиалга татахад алдаа гарлаа: " + error.message);
+            return;
+        }
+        renderOrderTable(data || []);
     }
 
     function getLocationBadgeMarkup(locationString) {
@@ -278,7 +289,7 @@
         return `<span class="location-tag loc-unknown">${locationString}</span>`;
     }
 
-    function renderTable(products) {
+    function renderTable(products, totalCount) {
         tableBody.innerHTML = '';
         if(!products || products.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding: 20px;">Бараа олдсонгүй.</td></tr>';
@@ -288,19 +299,12 @@
             return;
         }
 
-        const totalPages = Math.ceil(products.length / rowsPerPage);
-        if (currentPage > totalPages) currentPage = totalPages;
-        if (currentPage < 1) currentPage = 1;
-
-        const startIndex = (currentPage - 1) * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        const pageItems = products.slice(startIndex, endIndex);
-
+        const totalPages = Math.ceil(totalCount / rowsPerPage);
         document.getElementById('pageIndicator').innerText = `Хуудас ${currentPage} / ${totalPages}`;
         document.getElementById('prevPageBtn').disabled = (currentPage === 1);
-        document.getElementById('nextPageBtn').disabled = (currentPage === totalPages);
+        document.getElementById('nextPageBtn').disabled = (currentPage >= totalPages);
 
-        pageItems.forEach(product => {
+        products.forEach(product => {
             const currentStock = parseInt(product['Барааны тооллого'] || 0);
             const stockDisplay = currentStock > 0 ? `${currentStock} ширхэг` : `<span class="out-of-stock">Дууссан (0)</span>`;
             
@@ -333,18 +337,11 @@
 
     window.changePage = function(direction) {
         currentPage += direction;
-        renderTable(activeFilteredProducts);
+        fetchProducts();
     }
 
-    function renderOrderTable(allProducts) {
+    function renderOrderTable(outOfStockItems) {
         orderTableBody.innerHTML = '';
-        const outOfStockItems = allProducts.filter(p => parseInt(p['Барааны тооллого'] || 0) <= 0);
-        
-        const badgeElement = document.getElementById('orderBadgeCount');
-        if (badgeElement) {
-            badgeElement.innerText = outOfStockItems.length;
-        }
-        
         if (outOfStockItems.length === 0) {
             orderTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>';
             return;
@@ -371,63 +368,32 @@
         });
     }
 
-    // Form Submission Handler Setup
-    productForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        statusBox.style.color = "#38bdf8";
-        statusBox.innerText = "Шинэ барааг хадгалж байна...";
-        
-        const rawPrice = parseInt(document.getElementById('pPrice').value) || 0;
-        const calculatedVat = Math.round(rawPrice * 1.10);
-
-        const newProduct = {
-            'Барааны нэр': document.getElementById('pName').value.trim(),
-            'Төрөл': document.getElementById('pType').value.trim(),
-            'код': document.getElementById('pCode').value.trim(),
-            'нэгж үнэ': rawPrice,
-            'НӨАТ': calculatedVat,
-            'Барааны тооллого': parseInt(document.getElementById('pStock').value) || 0,
-            'Байршил': document.getElementById('pLoc').value
-        };
-
-        const { error } = await supabaseClient.from('products').insert([newProduct]);
-        if (error) {
-            statusBox.style.color = "#ef4444";
-            statusBox.innerText = "Нэмэхэд алдаа гарлаа: " + error.message;
-        } else {
-            productForm.reset();
-            document.getElementById('pVat').value = "";
-            statusBox.style.color = "#10b981";
-            statusBox.innerText = "Шинэ бараа амжилттай бүртгэгдлээ! Жагсаалтыг шинэчилж байна...";
-            await fetchProducts();
-        }
-    });
-
     window.handleAdjust = async function(id, currentStock, inputId, actionIdOrType) {
         const inputField = document.getElementById(inputId);
         const changeAmount = parseInt(inputField.value);
         
-        if (isNaN(changeAmount) || changeAmount <= 0) {
+        if(isNaN(changeAmount) || changeAmount <= 0) {
             alert("Зөв тоо хэмжээ оруулна уу!");
             return;
         }
 
+        let actionType = actionIdOrType;
+        if(actionIdOrType !== 'add_fixed') {
+            actionType = document.getElementById(actionIdOrType).value;
+        }
+
         let newStock = currentStock;
-        if (actionIdOrType === 'add_fixed') {
+        if(actionType === 'add' || actionType === 'add_fixed') {
             newStock = currentStock + changeAmount;
-        } else {
-            const actionDropdown = document.getElementById(actionIdOrType);
-            const operation = actionDropdown.value;
-            if (operation === 'add') {
-                newStock = currentStock + changeAmount;
-            } else if (operation === 'subtract') {
-                newStock = currentStock - changeAmount;
-                if (newStock < 0) newStock = 0; // Prevent negative stock numbers
+        } else if(actionType === 'subtract') {
+            newStock = currentStock - changeAmount;
+            if (newStock < 0) {
+                alert(`Алдаа: Таны агуулахад ердөө ${currentStock} ширхэг үлдсэн тул ${changeAmount}-ийг хасах боломжгүй!`);
+                return;
             }
         }
 
-        statusBox.style.color = "#38bdf8";
-        statusBox.innerText = `Барааны тоог өөрчилж байна (ID: ${id})...`;
+        statusBox.innerText = "Тооллого шинэчилж байна...";
 
         const { error } = await supabaseClient
             .from('products')
@@ -435,17 +401,90 @@
             .eq('id', id);
 
         if (error) {
-            statusBox.style.color = "#ef4444";
-            statusBox.innerText = "Хадгалахад алдаа гарлаа: " + error.message;
+            alert("Алдаа гарлаа: " + error.message);
         } else {
-            statusBox.style.color = "#10b981";
-            statusBox.innerText = "Тооллого амжилттай шинэчлэгдлээ!";
-            await fetchProducts();
+            if (currentActiveTab === "orders") {
+                fetchOutOfStockItems();
+                updateBadgeCount();
+            } else {
+                fetchProducts();
+            }
         }
     }
 
-    // Initial system load run trigger
+    productForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        statusBox.innerText = "Шалгаж байна...";
+        
+        const inputCode = parseFloat(document.getElementById('pCode').value);
+        const inputLocation = document.getElementById('pLoc').value;
+        const additionalStock = parseInt(document.getElementById('pStock').value);
+        const priceValue = parseFloat(priceInput.value);
+        const totalVatValue = priceValue * 1.10;
+
+        // Perform server match verification check instantly
+        const { data: existingProducts, error: checkError } = await supabaseClient
+            .from('products')
+            .select('*')
+            .eq('код', inputCode)
+            .eq('Байршил', inputLocation);
+
+        if (checkError) {
+            alert("Алдаа гарлаа: " + checkError.message);
+            return;
+        }
+
+        const existingProduct = existingProducts && existingProducts[0];
+
+        if (existingProduct) {
+            statusBox.innerText = "Ижил бараа олдлоо. Тооллогыг нэмэгдүүлж байна...";
+            const currentStock = parseInt(existingProduct['Барааны тооллого'] || 0);
+            const newStock = currentStock + additionalStock;
+
+            const { error } = await supabaseClient
+                .from('products')
+                .update({ 
+                    'Барааны тооллого': newStock,
+                    'нэгж үнэ': priceValue,
+                    'НӨАТ': totalVatValue
+                })
+                .eq('id', existingProduct.id);
+
+            if (error) {
+                alert("Алдаа гарлаа: " + error.message);
+            } else {
+                productForm.reset();
+                vatInput.value = ""; 
+                fetchProducts(); 
+            }
+        } else {
+            statusBox.innerText = "Шинэ бараа хадгалж байна...";
+            
+            const payload = {
+                'id': Math.floor(10000000 + Math.random() * 90000000), 
+                'Барааны нэр': document.getElementById('pName').value,
+                'Төрөл': document.getElementById('pType').value,
+                'код': inputCode, 
+                'нэгж үнэ': priceValue,
+                'НӨАТ': totalVatValue, 
+                'Барааны тооллого': additionalStock,
+                'Байршил': inputLocation
+            };
+
+            const { error } = await supabaseClient.from('products').insert([payload]);
+            if (error) {
+                alert("Алдаа гарлаа: " + error.message);
+            } else {
+                productForm.reset();
+                vatInput.value = ""; 
+                fetchProducts(); 
+            }
+        }
+    });
+
+    // Initial setup launch
     fetchProducts();
 </script>
+
 </body>
 </html>
