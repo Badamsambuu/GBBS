@@ -11,29 +11,31 @@
         h2 { text-align: center; color: #38bdf8; margin-top: 0; font-size: 24px; margin-bottom: 20px; }
         #statusBox { padding: 12px; background: #1e293b; margin-bottom: 20px; border-radius: 6px; color: #38bdf8; font-weight: bold; border: 1px solid #334155; text-align: center; }
         
-        /* Product Entry Form Grid */
         form { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) auto; gap: 12px; margin-bottom: 25px; }
         input { padding: 12px; border-radius: 6px; background: #1e293b; color: white; border: 1px solid #334155; outline: none; font-size: 14px; width: 100%; box-sizing: border-box; }
         input:focus { border-color: #38bdf8; }
         
-        /* Auto-calculated read-only fields */
         input:disabled { background: #1e293b70; color: #94a3b8; border-style: dashed; cursor: not-allowed; }
         
         .submit-btn { background: #10b981; font-weight: bold; cursor: pointer; border: none; padding: 12px 20px; border-radius: 6px; color: white; font-size: 14px; transition: background 0.2s; height: 100%; }
         .submit-btn:hover { background: #059669; }
         
-        /* Workers Search Box Area */
         .search-container { margin-bottom: 20px; background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
         .search-input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #475569; color: #f8fafc; font-size: 15px; border-radius: 6px; }
         .search-input:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2); }
         
-        /* Inventory Data Table */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 14px; border-bottom: 1px solid #334155; text-align: left; font-size: 14px; }
         th { background: #334155; color: #38bdf8; font-weight: 600; text-transform: uppercase; font-size: 12px; }
         tr:hover { background: #1e293b; }
-        .delete-btn { background: #ef4444; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; }
-        .delete-btn:hover { background: #dc2626; }
+        
+        /* Updated deduction button styling */
+        .minus-btn { background: #f59e0b; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .minus-btn:hover { background: #d97706; }
+        .minus-btn:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
+        
+        /* Out of stock text treatment */
+        .out-of-stock { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -88,10 +90,8 @@
     const vatInput = document.getElementById('pVat');
     const searchInput = document.getElementById('searchInput');
 
-    // Global variable to keep the downloaded inventory cache for instant filtering
     let allProductsCache = [];
 
-    // Auto calculate Price + 10%
     priceInput.addEventListener('input', () => {
         const price = parseFloat(priceInput.value);
         if (!isNaN(price) && price > 0) {
@@ -102,19 +102,14 @@
         }
     });
 
-    // NEW: Real-Time Instant Search Filter Logic
     searchInput.addEventListener('input', () => {
         const query = searchInput.value.toLowerCase().trim();
-        
-        // Filter out products that don't match our criteria
         const filteredProducts = allProductsCache.filter(product => {
             const name = (product['Барааны нэр'] || '').toLowerCase();
             const type = (product['Төрөл'] || '').toLowerCase();
             const code = String(product['код'] || '').toLowerCase();
-            
             return name.includes(query) || type.includes(query) || code.includes(query);
         });
-        
         renderTable(filteredProducts);
     });
 
@@ -129,10 +124,8 @@
             statusBox.style.color = "#38bdf8";
             statusBox.innerText = "Холболт амжилттай! Нийт бараа: " + (data ? data.length : 0);
             
-            // Update local cache and display
             allProductsCache = data || [];
             
-            // Respect any active user search filter during data syncs
             if(searchInput.value.trim() !== "") {
                 searchInput.dispatchEvent(new Event('input'));
             } else {
@@ -152,6 +145,14 @@
         }
 
         products.forEach(product => {
+            const currentStock = parseInt(product['Барааны тооллого'] || 0);
+            
+            // If stock is 0, show red "Дууссан" text instead of just 0
+            const stockDisplay = currentStock > 0 ? `${currentStock} ширхэг` : `<span class="out-of-stock">Дууссан (0)</span>`;
+            
+            // Disable the subtract button if item is already at 0
+            const isButtonDisabled = currentStock <= 0 ? 'disabled' : '';
+
             const row = `
                 <tr>
                     <td><strong>${product['Барааны нэр'] || '—'}</strong></td>
@@ -159,8 +160,12 @@
                     <td><code>${product['код'] || '0'}</code></td>
                     <td style="color: #4ade80; font-weight: bold;">${Number(product['нэгж үнэ'] || 0).toLocaleString()} ₮</td>
                     <td style="color: #f39c12; font-weight: bold;">${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
-                    <td>${product['Барааны тооллого'] || '0'} ширхэг</td>
-                    <td><button class="delete-btn" onclick="deleteProduct(${product.id})">Устгах</button></td>
+                    <td>${stockDisplay}</td>
+                    <td>
+                        <button class="minus-btn" ${isButtonDisabled} onclick="deductProduct(${product.id}, ${currentStock})">
+                            Зарсан (-1)
+                        </button>
+                    </td>
                 </tr>
             `;
             tableBody.innerHTML += row;
@@ -195,10 +200,22 @@
         }
     });
 
-    window.deleteProduct = async function(id) {
-        if(confirm('Устгах уу?')) {
-            await supabaseClient.from('products').delete().eq('id', id);
-            fetchProducts();
+    // NEW LOGIC: Deducts exactly 1 from database storage value instead of deleting row
+    window.deductProduct = async function(id, currentStock) {
+        if (currentStock <= 0) return;
+        
+        statusBox.innerText = "Тооллого шинэчилж байна...";
+        const newStock = currentStock - 1;
+
+        const { error } = await supabaseClient
+            .from('products')
+            .update({ 'Барааны тооллого': newStock })
+            .eq('id', id);
+
+        if (error) {
+            alert("Алдаа гарлаа: " + error.message);
+        } else {
+            fetchProducts(); // Refresh data layout smoothly
         }
     }
 
