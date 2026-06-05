@@ -9,6 +9,7 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #1e293b; color: #f8fafc; }
         .container { max-width: 1200px; margin: 40px auto; background: #0f172a; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; }
         h2 { text-align: center; color: #38bdf8; margin-top: 0; font-size: 24px; margin-bottom: 20px; }
+        .section-title { color: #f43f5e; font-size: 20px; margin-top: 40px; margin-bottom: 15px; border-bottom: 2px solid #f43f5e30; padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
         #statusBox { padding: 12px; background: #1e293b; margin-bottom: 20px; border-radius: 6px; color: #38bdf8; font-weight: bold; border: 1px solid #334155; text-align: center; }
         
         form { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) auto; gap: 12px; margin-bottom: 25px; }
@@ -29,20 +30,19 @@
         th { background: #334155; color: #38bdf8; font-weight: 600; text-transform: uppercase; font-size: 12px; }
         tr:hover { background: #1e293b; }
         
-        /* Action buttons container */
         .action-container { display: flex; gap: 6px; }
         
-        /* Deduct button */
         .minus-btn { background: #f59e0b; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; font-weight: bold; }
         .minus-btn:hover { background: #d97706; }
         .minus-btn:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
         
-        /* NEW: Add button styling */
         .plus-btn { background: #3b82f6; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; font-weight: bold; }
         .plus-btn:hover { background: #2563eb; }
         
-        /* Out of stock warning label */
         .out-of-stock { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px; }
+        
+        /* Order table custom header color to distinguish it */
+        .order-table th { background: #4c1d95; color: #f472b6; }
     </style>
 </head>
 <body>
@@ -82,6 +82,24 @@
             <tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Сервэрээс бараа уншиж байна...</td></tr>
         </tbody>
     </table>
+
+    <div class="section-title">🚨 Захиалга хийх барааны жагсаалт (Дууссан бараанууд)</div>
+    
+    <table class="order-table">
+        <thead>
+            <tr>
+                <th>Барааны нэр</th>
+                <th>Төрөл</th>
+                <th>Код</th>
+                <th>Үнэ + НӨАТ</th>
+                <th>Төлөв</th>
+                <th>Түргэн нэмэх</th>
+            </tr>
+        </thead>
+        <tbody id="orderTableBody">
+            <tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна.</td></tr>
+        </tbody>
+    </table>
 </div>
 
 <script>
@@ -92,6 +110,7 @@
     
     const productForm = document.getElementById('productForm');
     const tableBody = document.getElementById('inventoryTableBody');
+    const orderTableBody = document.getElementById('orderTableBody');
     const statusBox = document.getElementById('statusBox');
     const priceInput = document.getElementById('pPrice');
     const vatInput = document.getElementById('pVat');
@@ -138,6 +157,10 @@
             } else {
                 renderTable(allProductsCache);
             }
+
+            // NEW: Run the order list generator right after fetching fresh database records
+            renderOrderTable(allProductsCache);
+
         } catch (err) {
             statusBox.style.color = "#ef4444";
             statusBox.innerText = "Алдаа гарлаа: " + err.message;
@@ -180,6 +203,37 @@
         });
     }
 
+    // NEW FUNCTION: Automatically scans all cache data for items sitting at 0 stock
+    function renderOrderTable(allProducts) {
+        orderTableBody.innerHTML = '';
+        
+        // Filter out items where stock is less than or equal to 0
+        const outOfStockItems = allProducts.filter(p => parseInt(p['Барааны тооллого'] || 0) <= 0);
+        
+        if (outOfStockItems.length === 0) {
+            orderTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>';
+            return;
+        }
+
+        outOfStockItems.forEach(product => {
+            const row = `
+                <tr>
+                    <td><strong style="color: #f43f5e;">${product['Барааны нэр'] || '—'}</strong></td>
+                    <td><span>${product['Төрөл'] || '—'}</span></td>
+                    <td><code>${product['код'] || '0'}</code></td>
+                    <td>${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
+                    <td><span class="out-of-stock" style="background: rgba(244, 63, 94, 0.15)">⚠️ Захиалах шаардлагатай</span></td>
+                    <td>
+                        <button class="plus-btn" onclick="updateStockCount(${product.id}, 0, 1)">
+                            Шинээр ирсэн (+1)
+                        </button>
+                    </td>
+                </tr>
+            `;
+            orderTableBody.innerHTML += row;
+        });
+    }
+
     productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         statusBox.innerText = "Хадгалж байна...";
@@ -208,10 +262,9 @@
         }
     });
 
-    // UPDATED UNIVERSAL STOCK HANDLER: Handles both additions and subtractions safely
     window.updateStockCount = async function(id, currentStock, amount) {
         const newStock = currentStock + amount;
-        if (newStock < 0) return; // Prevent negative stock numbers completely
+        if (newStock < 0) return; 
         
         statusBox.innerText = "Тооллого шинэчилж байна...";
 
@@ -223,7 +276,7 @@
         if (error) {
             alert("Алдаа гарлаа: " + error.message);
         } else {
-            fetchProducts(); // Refresh layout updates instantly across devices
+            fetchProducts(); 
         }
     }
 
