@@ -29,12 +29,19 @@
         th { background: #334155; color: #38bdf8; font-weight: 600; text-transform: uppercase; font-size: 12px; }
         tr:hover { background: #1e293b; }
         
-        /* Updated deduction button styling */
+        /* Action buttons container */
+        .action-container { display: flex; gap: 6px; }
+        
+        /* Deduct button */
         .minus-btn { background: #f59e0b; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; font-weight: bold; }
         .minus-btn:hover { background: #d97706; }
         .minus-btn:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
         
-        /* Out of stock text treatment */
+        /* NEW: Add button styling */
+        .plus-btn { background: #3b82f6; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .plus-btn:hover { background: #2563eb; }
+        
+        /* Out of stock warning label */
         .out-of-stock { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px; }
     </style>
 </head>
@@ -146,81 +153,12 @@
 
         products.forEach(product => {
             const currentStock = parseInt(product['Барааны тооллого'] || 0);
-            
-            // If stock is 0, show red "Дууссан" text instead of just 0
             const stockDisplay = currentStock > 0 ? `${currentStock} ширхэг` : `<span class="out-of-stock">Дууссан (0)</span>`;
-            
-            // Disable the subtract button if item is already at 0
-            const isButtonDisabled = currentStock <= 0 ? 'disabled' : '';
+            const isMinusDisabled = currentStock <= 0 ? 'disabled' : '';
 
             const row = `
                 <tr>
                     <td><strong>${product['Барааны нэр'] || '—'}</strong></td>
                     <td><span style="color: #94a3b8;">${product['Төрөл'] || '—'}</span></td>
                     <td><code>${product['код'] || '0'}</code></td>
-                    <td style="color: #4ade80; font-weight: bold;">${Number(product['нэгж үнэ'] || 0).toLocaleString()} ₮</td>
-                    <td style="color: #f39c12; font-weight: bold;">${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
-                    <td>${stockDisplay}</td>
-                    <td>
-                        <button class="minus-btn" ${isButtonDisabled} onclick="deductProduct(${product.id}, ${currentStock})">
-                            Зарсан (-1)
-                        </button>
-                    </td>
-                </tr>
-            `;
-            tableBody.innerHTML += row;
-        });
-    }
-
-    productForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        statusBox.innerText = "Хадгалж байна...";
-        
-        const priceValue = parseFloat(priceInput.value);
-        const totalVatValue = priceValue * 1.10;
-        
-        const payload = {
-            'id': Math.floor(10000000 + Math.random() * 90000000), 
-            'Барааны нэр': document.getElementById('pName').value,
-            'Төрөл': document.getElementById('pType').value,
-            'код': parseFloat(document.getElementById('pCode').value), 
-            'нэгж үнэ': priceValue,
-            'НӨАТ': totalVatValue, 
-            'Барааны тооллого': parseInt(document.getElementById('pStock').value)
-        };
-
-        const { error } = await supabaseClient.from('products').insert([payload]);
-        if (error) {
-            alert("Алдаа гарлаа: " + error.message);
-            statusBox.innerText = "Алдаа: " + error.message;
-        } else {
-            productForm.reset();
-            vatInput.value = ""; 
-            fetchProducts(); 
-        }
-    });
-
-    // NEW LOGIC: Deducts exactly 1 from database storage value instead of deleting row
-    window.deductProduct = async function(id, currentStock) {
-        if (currentStock <= 0) return;
-        
-        statusBox.innerText = "Тооллого шинэчилж байна...";
-        const newStock = currentStock - 1;
-
-        const { error } = await supabaseClient
-            .from('products')
-            .update({ 'Барааны тооллого': newStock })
-            .eq('id', id);
-
-        if (error) {
-            alert("Алдаа гарлаа: " + error.message);
-        } else {
-            fetchProducts(); // Refresh data layout smoothly
-        }
-    }
-
-    fetchProducts();
-</script>
-
-</body>
-</html>
+                    <td style="color: #4ade80; font-weight: bold;">${Number(product['нэгж үнэ'] || 0).toLocaleString()}
