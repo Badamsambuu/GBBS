@@ -1,520 +1,142 @@
 <!DOCTYPE html>
-<html lang="mn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Бараа Удирдах Систем</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Inventory Dashboard</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #1e293b; color: #f8fafc; }
-        .container { max-width: 1300px; margin: 20px auto; background: #0f172a; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; position: relative; }
-        
-        .window-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 15px; margin-bottom: 25px; }
-        h2 { margin: 0; color: #38bdf8; font-size: 24px; }
-        
-        .header-buttons { display: flex; gap: 10px; align-items: center; }
-        .nav-tab-btn { background: #f43f5e; color: white; font-weight: bold; padding: 12px 24px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
-        .nav-tab-btn:hover { background: #e11d48; }
-        .nav-tab-btn.back-mode { background: #475569; }
-        .nav-tab-btn.back-mode:hover { background: #64748b; }
-        .order-badge { background: white; color: #f43f5e; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 10px; }
-
-        .import-btn-label { background: #10b981; color: white; font-weight: bold; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; display: inline-block; transition: background 0.2s; }
-        .import-btn-label:hover { background: #059669; }
-
-        #statusBox { padding: 12px; background: #1e293b; margin-bottom: 20px; border-radius: 6px; color: #38bdf8; font-weight: bold; border: 1px solid #334155; text-align: center; }
-        
-        form { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) auto; gap: 12px; margin-bottom: 25px; }
-        input, select { padding: 12px; border-radius: 6px; background: #1e293b; color: white; border: 1px solid #334155; outline: none; font-size: 14px; width: 100%; box-sizing: border-box; }
-        input:focus, select:focus { border-color: #38bdf8; }
-        input:disabled { background: #1e293b70; color: #94a3b8; border-style: dashed; cursor: not-allowed; }
-        
-        .submit-btn { background: #3b82f6; font-weight: bold; cursor: pointer; border: none; padding: 12px 20px; border-radius: 6px; color: white; font-size: 14px; transition: background 0.2s; height: 100%; }
-        .submit-btn:hover { background: #2563eb; }
-        
-        .search-container { margin-bottom: 20px; background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
-        .search-input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #475569; color: #f8fafc; font-size: 15px; border-radius: 6px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 14px; border-bottom: 1px solid #334155; text-align: left; font-size: 14px; }
-        th { background: #334155; color: #38bdf8; font-weight: 600; text-transform: uppercase; font-size: 12px; }
-        tr:hover { background: #1e293b; }
-        
-        .location-tag { padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 13px; display: inline-block; }
-        .loc-monos { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
-        .loc-22 { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
-        .loc-unknown { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
-        
-        .adjustment-box { display: flex; gap: 4px; align-items: center; max-width: 260px; }
-        .adjustment-box input { padding: 6px; font-size: 13px; width: 65px; text-align: center; }
-        .adjustment-box select { padding: 6px; font-size: 13px; width: 95px; background: #0f172a; }
-        
-        .save-btn { background: #3b82f6; border: none; padding: 6px 12px; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; font-weight: bold; width: 80px; }
-        .save-btn:hover { background: #2563eb; }
-        
-        .out-of-stock { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px; }
-
-        #mainInventoryView { display: block; }
-        #orderListView { display: none; }
-        
-        .order-table th { background: #4c1d95; color: #f472b6; }
-        .subpage-title { color: #f43f5e; margin-top: 0; margin-bottom: 20px; font-size: 20px; font-weight: bold; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f9fafb;
+            color: #111827;
+            margin: 0;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 24px;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+        }
+        .subtitle {
+            color: #4b5563;
+            margin: 0;
+        }
+        .table-container {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th {
+            background-color: #f9fafb;
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #374151;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        td {
+            padding: 16px;
+            font-size: 14px;
+            border-bottom: 1px solid #e5e7eb;
+            color: #4b5563;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .font-medium {
+            font-weight: 500;
+            color: #111827;
+        }
+        .badge {
+            display: inline-flex;
+            items-center: center;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 500;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    
-    <div class="window-header">
-        <h2 id="windowTitle">📦 Бараа Бүртгэл & Удирдлага</h2>
-        <div class="header-buttons">
-            <label class="import-btn-label" id="importLabel">
-                💚 Excel CSV Файл Уншуулах
-                <input type="file" id="bulkCsvInput" accept=".csv" style="display: none;">
-            </label>
-            <button type="button" class="nav-tab-btn" id="viewToggleBtn">
-                📋 Захиалга Хийх Бараанууд <span class="order-badge" id="orderBadgeCount">0</span>
-            </button>
+    <div class="container">
+        <header>
+            <h1>Барааны Бүртгэл</h1>
+            <p class="subtitle">Гар аргаар шинэчилсэн бүтээгдэхүүний жагсаалт</p>
+        </header>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Барааны нэр</th>
+                        <th>Төрөл</th>
+                        <th>Код</th>
+                        <th>Нэгж үнэ</th>
+                        <th>НӨАТ-тай үнэ</th>
+                        <th>Тооллого</th>
+                        <th>Байршил</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-rows">
+                    </tbody>
+            </table>
         </div>
     </div>
-    
-    <div id="statusBox">Систем ачаалж байна...</div>
 
-    <div id="mainInventoryView">
-        <form id="productForm">
-            <input type="text" id="pName" placeholder="Барааны нэр" required>
-            <input type="text" id="pType" placeholder="Төрөл" required>
-            <input type="text" id="pCode" placeholder="Код" required>
-            <input type="number" id="pPrice" placeholder="Нэгж үнэ (₮)" required>
-            <input type="text" id="pVat" placeholder="Үнэ + НӨАТ (10%)" disabled>
-            <input type="number" id="pStock" placeholder="Тоо ширхэг" required>
-            
-            <select id="pLoc" required>
-                <option value="" disabled selected>Байршил сонгох...</option>
-                <option value="Монос">Монос</option>
-                <option value="22">22</option>
-            </select>
-            
-            <button type="submit" class="submit-btn">Нэмэх</button>
-        </form>
+    <script>
+        // --- ТАНЫ БҮТЭЭГДЭХҮҮНИЙ ДАТА ЖАГСААЛТ ---
+        // Та доорх хаалтан дотор бараагаа хүссэнээрээ нэмж, хасаж, засварлаж болно.
+        const inventoryData = [
+            { name: "моторын блок", type: "Бусад", code: "", price: 3500000, vat: 3850000, stock: 1, location: "Монос" },
+            { name: "380 мотор", type: "Бусад", code: "", price: 20000000, vat: 22000000, stock: 1, location: "Монос" },
+            { name: "420 мотор", type: "Бусад", code: "", price: 22000000, vat: 24200000, stock: 0, location: "Монос" },
+            { name: "200Т кроп", type: "Бусад", code: "", price: 4500000, vat: 4950000, stock: 2, location: "Монос" },
+            { name: "ховоны сорочиг", type: "Бусад", code: "WG973152004", price: 85000, vat: 93500, stock: 0, location: "Монос" }
+            // Энд дараагийн мөрүүдээ яг энэ форматаар шивж оруулна уу
+        ];
 
-        <div class="search-container">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Бараа хайх... (Нэр, Төрөл, Код эсвэл 'Монос', '22' гэж шүүх боломжтой)">
-        </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Барааны нэр</th>
-                    <th>Төрөл</th>
-                    <th>Код</th>
-                    <th>Байршил</th>
-                    <th>Нэгж үнэ</th>
-                    <th>Үнэ + НӨАТ</th>
-                    <th>Тоо ширхэг</th>
-                    <th>Тооллого өөрчлөх</th>
-                </tr>
-            </thead>
-            <tbody id="inventoryTableBody">
-                <tr><td colspan="8" style="text-align: center; color: #94a3b8; padding: 20px;">Сервэрээс бараа уншиж байна...</td></tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div id="orderListView">
-        <div class="subpage-title">🚨 Захиалга хийх барааны жагсаалт (Агуулахад дууссан)</div>
-        <table class="order-table">
-            <thead>
-                <tr>
-                    <th>Барааны нэр</th>
-                    <th>Төрөл</th>
-                    <th>Код</th>
-                    <th>Байршил</th>
-                    <th>Үнэ + НӨАТ</th>
-                    <th>Төлөв</th>
-                    <th>Шинээр захиалга авах</th>
-                </tr>
-            </thead>
-            <tbody id="orderTableBody">
-                <tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>
-            </tbody>
-        </table>
-    </div>
-
-</div>
-
-<script>
-    const SUPABASE_URL = "https://gybhoexgcjxdlrjbhizg.supabase.co"; 
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5YmhvZXhnY2p4ZGxyamJoaXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NDc2NzksImV4cCI6MjA5NjEyMzY3OX0.Zo0_CeMztNdK3scal1F7C9UNUl54DxXpdOuqgT3n2ww";
-    
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    const productForm = document.getElementById('productForm');
-    const tableBody = document.getElementById('inventoryTableBody');
-    const orderTableBody = document.getElementById('orderTableBody');
-    const statusBox = document.getElementById('statusBox');
-    const priceInput = document.getElementById('pPrice');
-    const vatInput = document.getElementById('pVat');
-    const searchInput = document.getElementById('searchInput');
-    const bulkCsvInput = document.getElementById('bulkCsvInput');
-    const importLabel = document.getElementById('importLabel');
-    
-    const mainInventoryView = document.getElementById('mainInventoryView');
-    const orderListView = document.getElementById('orderListView');
-    const viewToggleBtn = document.getElementById('viewToggleBtn');
-    const orderBadgeCount = document.getElementById('orderBadgeCount');
-    const windowTitle = document.getElementById('windowTitle');
-
-    let allProductsCache = [];
-    let currentActiveTab = "inventory";
-
-    viewToggleBtn.addEventListener('click', () => {
-        if (currentActiveTab === "inventory") {
-            mainInventoryView.style.display = "none";
-            orderListView.style.display = "block";
-            windowTitle.innerText = "🚨 Агуулахын Захиалгууд";
-            viewToggleBtn.innerHTML = `⬅️ Үндсэн цэс рүү буцах`;
-            viewToggleBtn.classList.add("back-mode");
-            currentActiveTab = "orders";
-        } else {
-            orderListView.style.display = "none";
-            mainInventoryView.style.display = "block";
-            windowTitle.innerText = "📦 Бараа Бүртгэл & Удирдлага";
-            viewToggleBtn.innerHTML = `📋 Захиалга Хийх Бараанууд <span class="order-badge" id="orderBadgeCount">${orderBadgeCount.innerText}</span>`;
-            viewToggleBtn.classList.remove("back-mode");
-            currentActiveTab = "inventory";
-            fetchProducts(); 
-        }
-    });
-
-    priceInput.addEventListener('input', () => {
-        const price = parseFloat(priceInput.value);
-        if (!isNaN(price) && price > 0) {
-            const totalPriceWithVat = price * 1.10;
-            vatInput.value = Math.round(totalPriceWithVat).toLocaleString() + " ₮";
-        } else {
-            vatInput.value = "";
-        }
-    });
-
-    searchInput.addEventListener('input', () => {
-        const query = searchInput.value.toLowerCase().trim();
-        const filteredProducts = allProductsCache.filter(product => {
-            const name = (product['Барааны нэр'] || '').toLowerCase();
-            const type = (product['Төрөл'] || '').toLowerCase();
-            const code = String(product['код'] || '').toLowerCase();
-            const loc = (product['Байршил'] || '').toLowerCase();
-            return name.includes(query) || type.includes(query) || code.includes(query) || loc.includes(query);
-        });
-        renderTable(filteredProducts);
-    });
-
-    async function fetchProducts() {
-        try {
-            const { data, error } = await supabaseClient.from('products').select('*').order('id', { ascending: false });
-            if (error) {
-                statusBox.style.color = "#ef4444";
-                statusBox.innerText = "Алдаа: " + error.message;
-                return;
-            }
-            statusBox.style.color = "#38bdf8";
-            statusBox.innerText = "Холболт амжилттай! Нийт бараа: " + (data ? data.length : 0);
-            
-            allProductsCache = data || [];
-            
-            if(searchInput.value.trim() !== "") {
-                searchInput.dispatchEvent(new Event('input'));
-            } else {
-                renderTable(allProductsCache);
-            }
-            renderOrderTable(allProductsCache);
-        } catch (err) {
-            statusBox.style.color = "#ef4444";
-            statusBox.innerText = "Алдаа гарлаа: " + err.message;
-        }
-    }
-
-    function getLocationBadgeMarkup(locationString) {
-        if (!locationString) return `<span class="location-tag loc-unknown">Оруулаагүй</span>`;
-        if (locationString === 'Монос') return `<span class="location-tag loc-monos">🏢 Монос</span>`;
-        if (locationString === '22') return `<span class="location-tag loc-22">🚚 22</span>`;
-        return `<span class="location-tag loc-unknown">${locationString}</span>`;
-    }
-
-    function renderTable(products) {
-        tableBody.innerHTML = '';
-        if(!products || products.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding: 20px;">Бараа олдсонгүй.</td></tr>';
-            return;
+        // Function to clean format numeric view displays
+        function formatNumber(num) {
+            return new Intl.NumberFormat().format(num) + ' ₮';
         }
 
-        products.forEach(product => {
-            const currentStock = parseInt(product['Барааны тооллого'] || 0);
-            const stockDisplay = currentStock > 0 ? `${currentStock} ширхэг` : `<span class="out-of-stock">Дууссан (0)</span>`;
+        // Render rows cleanly directly onto screen UI
+        const tableBody = document.getElementById("inventory-rows");
+        
+        inventoryData.forEach(item => {
+            const row = document.createElement("tr");
             
-            const row = `
-                <tr>
-                    <td><strong>${product['Барааны нэр'] || '—'}</strong></td>
-                    <td><span style="color: #94a3b8;">${product['Төрөл'] || '—'}</span></td>
-                    <td><code>${product['код'] || '—'}</code></td>
-                    <td>${getLocationBadgeMarkup(product['Байршил'])}</td>
-                    <td style="color: #4ade80; font-weight: bold;">${Number(product['нэгж үнэ'] || 0).toLocaleString()} ₮</td>
-                    <td style="color: #f39c12; font-weight: bold;">${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
-                    <td>${stockDisplay}</td>
-                    <td>
-                        <div class="action-container">
-                            <div class="adjustment-box">
-                                <input type="number" id="amt-${product.id}" value="1" min="1">
-                                <select id="action-${product.id}">
-                                    <option value="subtract">Хасах (-)</option>
-                                    <option value="add">Нэмэх (+)</option>
-                                </select>
-                                <button class="save-btn" onclick="handleAdjust(${product.id}, ${currentStock}, 'amt-${product.id}', 'action-${product.id}')">Хадгалах</button>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
+            row.innerHTML = `
+                <td class="font-medium">${item.name}</td>
+                <td><span class="badge">${item.type}</span></td>
+                <td>${item.code ? item.code : '—'}</td>
+                <td>${formatNumber(item.price)}</td>
+                <td>${formatNumber(item.vat)}</td>
+                <td class="font-medium" style="color: ${item.stock > 0 ? '#10b981' : '#ef4444'}">${item.stock}</td>
+                <td>${item.location}</td>
             `;
-            tableBody.innerHTML += row;
+            
+            tableBody.appendChild(row);
         });
-    }
-
-    function renderOrderTable(allProducts) {
-        orderTableBody.innerHTML = '';
-        const outOfStockItems = allProducts.filter(p => parseInt(p['Барааны тооллого'] || 0) <= 0);
-        
-        const badgeElement = document.getElementById('orderBadgeCount');
-        if (badgeElement) {
-            badgeElement.innerText = outOfStockItems.length;
-        }
-        
-        if (outOfStockItems.length === 0) {
-            orderTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>';
-            return;
-        }
-
-        outOfStockItems.forEach(product => {
-            const row = `
-                <tr>
-                    <td><strong style="color: #f43f5e;">${product['Барааны нэр'] || '—'}</strong></td>
-                    <td><span>${product['Төрөл'] || '—'}</span></td>
-                    <td><code>${product['код'] || '—'}</code></td>
-                    <td>${getLocationBadgeMarkup(product['Байршил'])}</td>
-                    <td>${Number(product['НӨАТ'] || 0).toLocaleString()} ₮</td>
-                    <td><span class="out-of-stock" style="background: rgba(244, 63, 94, 0.15)">⚠️ Захиалах</span></td>
-                    <td>
-                        <div class="adjustment-box">
-                            <input type="number" id="orderAmt-${product.id}" value="10" min="1">
-                            <button class="save-btn" style="background: #10b981; width: 120px;" onclick="handleAdjust(${product.id}, 0, 'orderAmt-${product.id}', 'add_fixed')">Ирсэн (Нэмэх)</button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-            orderTableBody.innerHTML += row;
-        });
-    }
-
-    window.handleAdjust = async function(id, currentStock, inputId, actionIdOrType) {
-        const inputField = document.getElementById(inputId);
-        const changeAmount = parseInt(inputField.value);
-        
-        if(isNaN(changeAmount) || changeAmount <= 0) {
-            alert("Зөв тоо хэмжээ оруулна уу!");
-            return;
-        }
-
-        let actionType = actionIdOrType;
-        if(actionIdOrType !== 'add_fixed') {
-            actionType = document.getElementById(actionIdOrType).value;
-        }
-
-        let newStock = currentStock;
-        if(actionType === 'add' || actionType === 'add_fixed') {
-            newStock = currentStock + changeAmount;
-        } else if(actionType === 'subtract') {
-            newStock = currentStock - changeAmount;
-            if (newStock < 0) {
-                alert(`Алдаа: Таны агуулахад ердөө ${currentStock} ширхэг үлдсэн тул ${changeAmount}-ийг хасах боломжгүй!`);
-                return;
-            }
-        }
-
-        statusBox.innerText = "Тооллого шинэчилж байна...";
-
-        const { error } = await supabaseClient
-            .from('products')
-            .update({ 'Барааны тооллого': newStock })
-            .eq('id', id);
-
-        if (error) {
-            alert("Алдаа гарлаа: " + error.message);
-        } else {
-            fetchProducts();
-        }
-    }
-
-    productForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        statusBox.innerText = "Шалгаж байна...";
-        
-        const inputCode = document.getElementById('pCode').value.trim();
-        const inputLocation = document.getElementById('pLoc').value;
-        const additionalStock = parseInt(document.getElementById('pStock').value);
-        const priceValue = parseFloat(priceInput.value);
-        const totalVatValue = priceValue * 1.10;
-
-        const existingProduct = allProductsCache.find(product => 
-            String(product['код']).trim() === inputCode && 
-            product['Байршил'] === inputLocation
-        );
-
-        if (existingProduct) {
-            statusBox.innerText = "Ижил бараа олдлоо. Тооллогыг нэмэгдүүлж байна...";
-            const currentStock = parseInt(existingProduct['Барааны тооллого'] || 0);
-            const newStock = currentStock + additionalStock;
-
-            const { error } = await supabaseClient
-                .from('products')
-                .update({ 
-                    'Барааны тооллого': newStock,
-                    'нэгж үнэ': priceValue,
-                    'НӨАТ': totalVatValue
-                })
-                .eq('id', existingProduct.id);
-
-            if (error) {
-                alert("Алдаа гарлаа: " + error.message);
-                statusBox.innerText = "Алдаа: " + error.message;
-            } else {
-                productForm.reset();
-                vatInput.value = ""; 
-                fetchProducts(); 
-            }
-        } else {
-            statusBox.innerText = "Шинэ бараа хадгалж байна...";
-            const payload = {
-                'id': Math.floor(10000000 + Math.random() * 90000000), 
-                'Барааны нэр': document.getElementById('pName').value,
-                'Төрөл': document.getElementById('pType').value,
-                'код': inputCode, 
-                'нэгж үнэ': priceValue,
-                'НӨАТ': totalVatValue, 
-                'Барааны тооллого': additionalStock,
-                'Байршил': inputLocation
-            };
-
-            const { error } = await supabaseClient.from('products').insert([payload]);
-            if (error) {
-                alert("Алдаа гарлаа: " + error.message);
-                statusBox.innerText = "Алдаа: " + error.message;
-            } else {
-                productForm.reset();
-                vatInput.value = ""; 
-                fetchProducts(); 
-            }
-        }
-    });
-
-    // ================= PARSER ADJUSTED TO THE CLEAN RE-STRUCTURED CSV LAYOUT =================
-    function parseCSVLine(text) {
-        let p = '', r = [];
-        let q = false;
-        for (let i = 0; i < text.length; i++) {
-            let c = text[i];
-            if (c === '"') { q = !q; }
-            else if (c === ',' && !q) { r.push(p); p = ''; }
-            else { p += c; }
-        }
-        r.push(p);
-        return r;
-    }
-
-    bulkCsvInput.addEventListener('change', () => {
-        const file = bulkCsvInput.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        statusBox.style.color = "#eab308";
-        statusBox.innerText = "⏳ Reading dataset, please wait...";
-        importLabel.style.opacity = "0.5";
-
-        reader.onload = async function (e) {
-            const text = e.target.result;
-            const lines = text.split(/\r?\n/);
-            const uploadPayload = [];
-
-            // Starts at index 1 because index 0 is the headers row
-            for (let i = 1; i < lines.length; i++) {
-                let line = lines[i].trim();
-                if (!line) continue;
-
-                let cols = parseCSVLine(line);
-                if (cols.length < 7) continue;
-
-                let pName = cols[1] ? cols[1].trim() : "";
-                let pType = cols[2] ? cols[2].trim() : "Бусад";
-                let code = cols[3] ? cols[3].trim() : "—";
-                if(code.toLowerCase() === "nan" || code === "") code = "—";
-
-                let price = parseFloat(cols[4]) || 0;
-                let vat = parseFloat(cols[5]) || Math.round(price * 1.10);
-                let stock = parseInt(cols[6]) || 0;
-                let location = cols[7] ? cols[7].trim() : "Монос";
-
-                if (!pName || pName.toLowerCase() === "nan") {
-                    continue;
-                }
-
-                uploadPayload.push({
-                    'id': Math.floor(10000000 + Math.random() * 90000000),
-                    'Барааны нэр': pName,
-                    'Төрөл': pType,
-                    'код': code,
-                    'нэгж үнэ': price,
-                    'НӨАТ': vat,
-                    'Барааны тооллого': stock,
-                    'Байршил': location
-                });
-            }
-
-            statusBox.innerText = `⏳ Parsed ${uploadPayload.length} valid rows. Wiping old items for clean sync...`;
-
-            // Clear old items
-            await supabaseClient.from('products').delete().neq('id', 0);
-
-            statusBox.innerText = `🚀 Synchronizing clean data into database...`;
-
-            const chunkSize = 150;
-            let successCount = 0;
-
-            for (let i = 0; i < uploadPayload.length; i += chunkSize) {
-                const chunk = uploadPayload.slice(i, i + chunkSize);
-                const { error } = await supabaseClient.from('products').insert(chunk);
-                
-                if (error) {
-                    alert(`Sync Error: ${error.message}`);
-                    statusBox.style.color = "#ef4444";
-                    statusBox.innerText = `Error: stopped at chunk due to ${error.message}`;
-                    importLabel.style.opacity = "1";
-                    fetchProducts();
-                    return;
-                }
-                successCount += chunk.length;
-                statusBox.innerText = `⏳ Transferring data... (${successCount} / ${uploadPayload.length})`;
-            }
-
-            statusBox.style.color = "#4ade80";
-            statusBox.innerText = `🎉 Complete! Successfully processed ${successCount} parts with verified prices & inventory.`;
-            importLabel.style.opacity = "1";
-            bulkCsvInput.value = ""; 
-            fetchProducts();
-        };
-
-        reader.readAsText(file);
-    });
-
-    fetchProducts();
-</script>
-
+    </script>
 </body>
 </html>
