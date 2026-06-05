@@ -56,12 +56,12 @@
         .order-table th { background: #4c1d95; color: #f472b6; }
         .subpage-title { color: #f43f5e; margin-top: 0; margin-bottom: 20px; font-size: 20px; font-weight: bold; }
 
-        /* Pagination Controls Styling */
+        /* Shared Pagination Controls Styling */
         .pagination-container { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px; padding-top: 15px; border-top: 1px solid #334155; }
         .page-btn { background: #334155; color: white; border: 1px solid #475569; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background 0.2s; }
         .page-btn:hover { background: #475569; }
         .page-btn:disabled { background: #1e293b; color: #64748b; border-color: #334155; cursor: not-allowed; }
-        #pageIndicator { font-size: 14px; font-weight: 600; color: #94a3b8; }
+        .page-indicator { font-size: 14px; font-weight: 600; color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -119,7 +119,7 @@
 
         <div class="pagination-container">
             <button class="page-btn" id="prevPageBtn" onclick="changePage(-1)">⬅️ Өмнөх</button>
-            <span id="pageIndicator">Хуудас 1 / 1</span>
+            <span class="page-indicator" id="pageIndicator">Хуудас 1 / 1</span>
             <button class="page-btn" id="nextPageBtn" onclick="changePage(1)">Дараах ➡️</button>
         </div>
     </div>
@@ -142,6 +142,12 @@
                 <tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>
             </tbody>
         </table>
+
+        <div class="pagination-container">
+            <button class="page-btn" id="orderPrevPageBtn" onclick="changeOrderPage(-1)">⬅️ Өмнөх</button>
+            <span class="page-indicator" id="orderPageIndicator">Хуудас 1 / 1</span>
+            <button class="page-btn" id="orderNextPageBtn" onclick="changeOrderPage(1)">Дараах ➡️</button>
+        </div>
     </div>
 
 </div>
@@ -166,8 +172,9 @@
     const orderBadgeCount = document.getElementById('orderBadgeCount');
     const windowTitle = document.getElementById('windowTitle');
 
-    // Server-side Pagination Configuration state Variables
+    // Pagination Configuration state Variables (Both default to 50 rows)
     let currentPage = 1;
+    let currentOrderPage = 1;
     const rowsPerPage = 50; 
     let currentActiveTab = "inventory";
     let searchTimeout = null;
@@ -180,6 +187,7 @@
             viewToggleBtn.innerHTML = `⬅️ Үндсэн цэс рүү буцах`;
             viewToggleBtn.classList.add("back-mode");
             currentActiveTab = "orders";
+            currentOrderPage = 1; // reset page back to 1 upon view enter
             fetchOutOfStockItems();
         } else {
             orderListView.style.display = "none";
@@ -188,6 +196,7 @@
             viewToggleBtn.innerHTML = `📋 Захиалга Хийх Бараанууд <span class="order-badge" id="orderBadgeCount">${orderBadgeCount.innerText}</span>`;
             viewToggleBtn.classList.remove("back-mode");
             currentActiveTab = "inventory";
+            currentPage = 1; // reset main page back to 1 upon view return
             fetchProducts(); 
         }
     });
@@ -202,13 +211,12 @@
         }
     });
 
-    // Debounced Search Input handler to prevent rapid query spamming
     searchInput.addEventListener('input', () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             currentPage = 1; 
             fetchProducts();
-        }, 300); // 300ms debounce window
+        }, 300);
     });
 
     async function fetchProducts() {
@@ -220,12 +228,10 @@
             const startIndex = (currentPage - 1) * rowsPerPage;
             const endIndex = startIndex + rowsPerPage - 1;
 
-            // Start building query
             let query = supabaseClient
                 .from('products')
-                .select('*', { count: 'exact' }); // Requests total count of matches dynamically
+                .select('*', { count: 'exact' });
 
-            // Apply Server-Side filter matches if query is active
             if (searchQuery !== "") {
                 if (!isNaN(searchQuery)) {
                     query = query.eq('код', parseFloat(searchQuery));
@@ -234,7 +240,6 @@
                 }
             }
 
-            // Apply server order boundaries and specific page index constraints
             const { data, error, count } = await query
                 .order('id', { ascending: false })
                 .range(startIndex, endIndex);
@@ -247,8 +252,6 @@
 
             statusBox.innerText = "Систем бэлэн. Нийт шүүгдсэн бараа: " + (count || 0);
             renderTable(data || [], count || 0);
-            
-            // Silently update out-of-stock count badge in the background
             updateBadgeCount();
         } catch (err) {
             statusBox.style.color = "#ef4444";
@@ -267,19 +270,39 @@
         }
     }
 
+    // New Server-Side Paginated Out of Stock Fetching function
     async function fetchOutOfStockItems() {
-        orderTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Захиалгуудыг ачаалж байна...</td></tr>';
-        const { data, error } = await supabaseClient
-            .from('products')
-            .select('*')
-            .lte('Барааны тооллого', 0)
-            .order('id', { ascending: false });
+        try {
+            statusBox.style.color = "#38bdf8";
+            statusBox.innerText = "Захиалга ачаалж байна...";
+            orderTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Захиалгуудыг ачаалж байна...</td></tr>';
+            
+            const startIndex = (currentOrderPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage - 1;
 
-        if (error) {
-            alert("Захиалга татахад алдаа гарлаа: " + error.message);
-            return;
+            const { data, error, count } = await supabaseClient
+                .from('products')
+                .select('*', { count: 'exact' })
+                .lte('Барааны тооллого', 0)
+                .order('id', { ascending: false })
+                .range(startIndex, endIndex);
+
+            if (error) {
+                statusBox.style.color = "#ef4444";
+                statusBox.innerText = "Алдаа: " + error.message;
+                return;
+            }
+
+            statusBox.innerText = "Жагсаалт бэлэн. Нийт дууссан бараа: " + (count || 0);
+            renderOrderTable(data || [], count || 0);
+            
+            if (orderBadgeCount) {
+                orderBadgeCount.innerText = count || 0;
+            }
+        } catch (err) {
+            statusBox.style.color = "#ef4444";
+            statusBox.innerText = "Алдаа гарлаа: " + err.message;
         }
-        renderOrderTable(data || []);
     }
 
     function getLocationBadgeMarkup(locationString) {
@@ -335,17 +358,21 @@
         });
     }
 
-    window.changePage = function(direction) {
-        currentPage += direction;
-        fetchProducts();
-    }
-
-    function renderOrderTable(outOfStockItems) {
+    // Separate pagination renderer logic specifically for out of stock layouts
+    function renderOrderTable(outOfStockItems, totalCount) {
         orderTableBody.innerHTML = '';
-        if (outOfStockItems.length === 0) {
+        if (!outOfStockItems || outOfStockItems.length === 0) {
             orderTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Одоогоор дууссан бараа байхгүй байна. 🎉</td></tr>';
+            document.getElementById('orderPageIndicator').innerText = "Хуудас 0 / 0";
+            document.getElementById('orderPrevPageBtn').disabled = true;
+            document.getElementById('orderNextPageBtn').disabled = true;
             return;
         }
+
+        const totalPages = Math.ceil(totalCount / rowsPerPage);
+        document.getElementById('orderPageIndicator').innerText = `Хуудас ${currentOrderPage} / ${totalPages}`;
+        document.getElementById('orderPrevPageBtn').disabled = (currentOrderPage === 1);
+        document.getElementById('orderNextPageBtn').disabled = (currentOrderPage >= totalPages);
 
         outOfStockItems.forEach(product => {
             const row = `
@@ -366,6 +393,17 @@
             `;
             orderTableBody.innerHTML += row;
         });
+    }
+
+    window.changePage = function(direction) {
+        currentPage += direction;
+        fetchProducts();
+    }
+
+    // New configuration action logic to allow multi-page shifting on order list
+    window.changeOrderPage = function(direction) {
+        currentOrderPage += direction;
+        fetchOutOfStockItems();
     }
 
     window.handleAdjust = async function(id, currentStock, inputId, actionIdOrType) {
@@ -405,7 +443,6 @@
         } else {
             if (currentActiveTab === "orders") {
                 fetchOutOfStockItems();
-                updateBadgeCount();
             } else {
                 fetchProducts();
             }
@@ -422,7 +459,6 @@
         const priceValue = parseFloat(priceInput.value);
         const totalVatValue = priceValue * 1.10;
 
-        // Perform server match verification check instantly
         const { data: existingProducts, error: checkError } = await supabaseClient
             .from('products')
             .select('*')
@@ -438,7 +474,7 @@
 
         if (existingProduct) {
             statusBox.innerText = "Ижил бараа олдлоо. Тооллогыг нэмэгдүүлж байна...";
-            const currentStock = parseInt(existingProduct['Барааны тооллого'] || 0);
+            const currentStock = parseInt(existingProduct['Баarаны тооллого'] || 0);
             const newStock = currentStock + additionalStock;
 
             const { error } = await supabaseClient
@@ -482,7 +518,6 @@
         }
     });
 
-    // Initial setup launch
     fetchProducts();
 </script>
 
