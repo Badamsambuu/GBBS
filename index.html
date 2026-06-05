@@ -26,17 +26,25 @@
 
         #statusBox { padding: 12px; background: #1e293b; margin-bottom: 20px; border-radius: 6px; color: #38bdf8; font-weight: bold; border: 1px solid #334155; text-align: center; }
         
-        form { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) auto; gap: 12px; margin-bottom: 25px; }
+        form, .intake-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 25px; }
         input, select, textarea { padding: 12px; border-radius: 6px; background: #1e293b; color: white; border: 1px solid #334155; outline: none; font-size: 14px; width: 100%; box-sizing: border-box; }
         input:focus, select:focus, textarea:focus { border-color: #38bdf8; }
         input:disabled { background: #1e293b70; color: #94a3b8; border-style: dashed; cursor: not-allowed; }
         
-        .submit-btn { background: #10b981; font-weight: bold; cursor: pointer; border: none; padding: 12px 20px; border-radius: 6px; color: white; font-size: 14px; transition: background 0.2s; height: 100%; }
+        .submit-btn { background: #10b981; font-weight: bold; cursor: pointer; border: none; padding: 12px 20px; border-radius: 6px; color: white; font-size: 14px; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .submit-btn:hover { background: #059669; }
+        .danger-btn { background: #ef4444; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
+        .danger-btn:hover { background: #dc2626; }
         
-        .search-container { margin-bottom: 20px; background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
+        .search-container { margin-bottom: 20px; background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; position: relative; }
         .search-input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #475569; color: #f8fafc; font-size: 15px; border-radius: 6px; }
         
+        /* Auto-suggest Search Pop-out box */
+        .suggest-box { position: absolute; left: 15px; right: 15px; background: #0f172a; border: 2px solid #38bdf8; border-top: none; border-radius: 0 0 8px 8px; max-height: 250px; overflow-y: auto; z-index: 999; display: none; box-shadow: 0 10px 20px rgba(0,0,0,0.6); }
+        .suggest-item { padding: 12px 15px; border-bottom: 1px solid #1e293b; cursor: pointer; display: flex; justify-content: space-between; font-size: 14px; transition: background 0.2s; }
+        .suggest-item:hover { background: #1e293b; color: #38bdf8; }
+        .suggest-item span { color: #94a3b8; font-size: 13px; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 14px; border-bottom: 1px solid #334155; text-align: left; font-size: 14px; }
         th { background: #334155; color: #38bdf8; font-weight: 600; text-transform: uppercase; font-size: 12px; }
@@ -64,16 +72,6 @@
         .subpage-title { color: #f43f5e; margin-top: 0; margin-bottom: 20px; font-size: 20px; font-weight: bold; }
         .intake-title { color: #38bdf8; }
 
-        .intake-container { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 15px; }
-        .intake-card { background: #1e293b; padding: 20px; border-radius: 8px; border: 1px solid #334155; }
-        .intake-card h3 { margin-top: 0; color: #38bdf8; font-size: 16px; margin-bottom: 15px; }
-        .intake-instructions { font-size: 13px; color: #94a3b8; line-height: 1.6; }
-        .intake-instructions code { background: #0f172a; padding: 2px 6px; border-radius: 4px; color: #f43f5e; }
-        
-        .log-box { background: #0f172a; border: 1px solid #334155; padding: 15px; border-radius: 6px; height: 250px; overflow-y: auto; font-family: monospace; font-size: 13px; color: #38bdf8; line-height: 1.5; }
-        .log-success { color: #10b981; }
-        .log-error { color: #ef4444; }
-
         .pagination-container { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px; padding-top: 15px; border-top: 1px solid #334155; }
         .page-btn { background: #334155; color: white; border: 1px solid #475569; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background 0.2s; }
         .page-btn:hover { background: #475569; }
@@ -83,7 +81,7 @@
         @media print {
             body { background: white !important; color: black !important; padding: 0 !important; }
             .container { max-width: 100% !important; border: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; }
-            .window-header, form, .search-container, .pagination-container, #statusBox, .action-container, .print-action-bar, .intake-container, th:last-child, td:last-child { display: none !important; }
+            .window-header, form, .intake-form, .search-container, .pagination-container, #statusBox, .action-container, .print-action-bar, .suggest-box, th:last-child, td:last-child { display: none !important; }
             table { width: 100% !important; margin-top: 20px !important; border: 1px solid #000 !important; }
             th, td { border-bottom: 1px solid #000 !important; color: black !important; padding: 8px !important; font-size: 12px !important; }
             th { background: #eaeaea !important; color: black !important; }
@@ -188,40 +186,44 @@
     </div>
 
     <div id="intakeListView">
-        <div class="subpage-title intake-title">📦 Шинээр бараа татан авалт (Багцаар нэмэх)</div>
+        <div class="subpage-title intake-title">📥 Шинээр бараа татан авалт (Багцаар хадгалах)</div>
         
-        <div class="intake-container">
-            <div class="intake-card">
-                <h3>1. Таталтын мэдээлэл оруулах</h3>
-                <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom: 5px; font-size:13px; color:#94a3b8;">Ирсэн огноо:</label>
-                    <input type="date" id="intakeDate">
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom: 5px; font-size:13px; color:#94a3b8;">Байршил:</label>
-                    <select id="intakeLoc">
-                        <option value="Монос">Монос</option>
-                        <option value="22">22</option>
-                    </select>
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom: 5px; font-size:13px; color:#94a3b8;">Ирсэн барааны жагсаалт:</label>
-                    <textarea id="intakeBatchRaw" rows="8" placeholder="Код, Тоо ширхэг&#10;Жишээ нь:&#10;1002, 50&#10;1005, 120"></textarea>
-                </div>
-                <button type="button" class="submit-btn" style="width:100%;" onclick="processIncomingBatch()">📥 Таталтыг баазад бүртгэх</button>
+        <div class="intake-form">
+            <div>
+                <input type="date" id="intakeDate">
             </div>
+            <div>
+                <select id="intakeLoc">
+                    <option value="Монос">Монос байршил</option>
+                    <option value="22">22 байршил</option>
+                </select>
+            </div>
+            <div style="grid-column: span 2; position: relative;">
+                <input type="text" id="intakeSearchInput" class="search-input" style="background:#1e293b; margin:0;" placeholder="🔍 Барааны код эсвэл нэр бичиж хайх...">
+                <div class="suggest-box" id="suggestBox"></div>
+            </div>
+        </div>
 
-            <div class="intake-card">
-                <h3>2. Зааварчилгаа & Процессын түүх</h3>
-                <div class="intake-instructions" style="margin-bottom:15px;">
-                    <ul>
-                        <li>Барааны кодууд системд урьдчилан бүртгэгдсэн байх шаардлагатай.</li>
-                        <li>Мөр бүрт <code>Код, Тоо хэмжээ</code> гэж бичнэ үү (таслал эсвэл зайгаар тусгаарлаж болно).</li>
-                        <li>Систем огноо болон байршлыг шүүж, тооллогыг автоматаар нэмэгдүүлнэ.</li>
-                    </ul>
-                </div>
-                <div class="log-box" id="intakeLogBox">> Систем таталт боловсруулахад бэлэн байна...</div>
-            </div>
+        <h3 style="color:#38bdf8; font-size:16px; margin-top:20px;">📋 Татан авалтын түр жагсаалт (Сагс):</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Барааны нэр</th>
+                    <th>Төрөл</th>
+                    <th>Код</th>
+                    <th>Байршил</th>
+                    <th>Одоогийн үлдэгдэл</th>
+                    <th style="width: 150px;">Татах тоо (Ширхэг)</th>
+                    <th>Үйлдэл</th>
+                </tr>
+            </thead>
+            <tbody id="intakeTableBody">
+                <tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 30px;">Татах бараануудаа дээрээс хайж сонгон энд жагсаана уу.</td></tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 25px; display: flex; justify-content: flex-end;" id="submitAllContainer">
+            <button type="button" class="submit-btn" style="padding:15px 35px; font-size:15px;" onclick="saveWholeBatchToDatabase()">📥 Бүх таталтыг баазад хадгалах</button>
         </div>
     </div>
 
@@ -236,10 +238,13 @@
     const productForm = document.getElementById('productForm');
     const tableBody = document.getElementById('inventoryTableBody');
     const orderTableBody = document.getElementById('orderTableBody');
+    const intakeTableBody = document.getElementById('intakeTableBody');
     const statusBox = document.getElementById('statusBox');
     const priceInput = document.getElementById('pPrice');
     const vatInput = document.getElementById('pVat');
     const searchInput = document.getElementById('searchInput');
+    const intakeSearchInput = document.getElementById('intakeSearchInput');
+    const suggestBox = document.getElementById('suggestBox');
     
     const mainInventoryView = document.getElementById('mainInventoryView');
     const orderListView = document.getElementById('orderListView');
@@ -247,21 +252,21 @@
     const viewToggleBtn = document.getElementById('viewToggleBtn');
     const orderBadgeCount = document.getElementById('orderBadgeCount');
     const windowTitle = document.getElementById('windowTitle');
-    const intakeLogBox = document.getElementById('intakeLogBox');
 
     let currentPage = 1;
     let currentOrderPage = 1;
     const rowsPerPage = 50; 
-    let currentActiveTab = "inventory"; // "inventory", "orders", or "intake"
+    let currentActiveTab = "inventory"; 
     let searchTimeout = null;
+    let intakeSearchTimeout = null;
 
-    // Set intake default date to today
+    // Array to store active batch items locally before sending them to Supabase
+    let localBatchList = [];
+
     document.getElementById('intakeDate').valueAsDate = new Date();
 
-    // Loop through 3 subpages smoothly
     viewToggleBtn.addEventListener('click', () => {
         if (currentActiveTab === "inventory") {
-            // Switch to Order List
             mainInventoryView.style.display = "none";
             orderListView.style.display = "block";
             intakeListView.style.display = "none";
@@ -272,7 +277,6 @@
             currentOrderPage = 1; 
             fetchOutOfStockItems();
         } else if (currentActiveTab === "orders") {
-            // Switch to Intake Subpage
             mainInventoryView.style.display = "none";
             orderListView.style.display = "none";
             intakeListView.style.display = "block";
@@ -280,9 +284,8 @@
             viewToggleBtn.innerHTML = `⬅️ Үндсэн цэс рүү буцах`;
             viewToggleBtn.className = "nav-tab-btn back-mode";
             currentActiveTab = "intake";
-            intakeLogBox.innerHTML = `> Систем таталт боловсруулахад бэлэн байна... (${document.getElementById('intakeDate').value})`;
+            renderLocalBatchTable();
         } else {
-            // Return back to Main Inventory Menu View
             orderListView.style.display = "none";
             intakeListView.style.display = "none";
             mainInventoryView.style.display = "block";
@@ -312,6 +315,163 @@
             fetchProducts();
         }, 300);
     });
+
+    // AUTO-SUGGEST POP OUT LOGIC FOR STOCK INTAKE TAB
+    intakeSearchInput.addEventListener('input', () => {
+        clearTimeout(intakeSearchTimeout);
+        const searchVal = intakeSearchInput.value.trim();
+        const activeLocation = document.getElementById('intakeLoc').value;
+
+        if (searchVal.length < 1) {
+            suggestBox.style.display = "none";
+            return;
+        }
+
+        intakeSearchTimeout = setTimeout(async () => {
+            let query = supabaseClient.from('products').select('*').eq('Байршил', activeLocation);
+
+            if (!isNaN(searchVal)) {
+                query = query.eq('код', parseFloat(searchVal));
+            } else {
+                query = query.or(`"Барааны нэр".ilike.%${searchVal}%,Төрөл.ilike.%${searchVal}%`);
+            }
+
+            const { data, error } = await query.limit(8);
+
+            if (!error && data && data.length > 0) {
+                suggestBox.innerHTML = '';
+                suggestBox.style.display = "block";
+
+                data.forEach(product => {
+                    const item = document.createElement('div');
+                    item.className = "suggest-item";
+                    item.innerHTML = `<strong>${product['Барааны нэр']}</strong> <span>Код: ${product['код']} | Үлдэгдэл: ${product['Барааны тооллого']} ш</span>`;
+                    
+                    // Click listener to add selected pop-out item directly to the batch queue list
+                    item.addEventListener('click', () => {
+                        addItemToBatch(product);
+                        suggestBox.style.display = "none";
+                        intakeSearchInput.value = '';
+                    });
+                    suggestBox.appendChild(item);
+                });
+            } else {
+                suggestBox.innerHTML = '<div style="padding:12px; text-align:center; color:#94a3b8;">Тохирох бараа олдсонгүй</div>';
+                suggestBox.style.display = "block";
+            }
+        }, 200);
+    });
+
+    // Hide suggestions box if clicking outside search box layout
+    document.addEventListener('click', (e) => {
+        if (e.target !== intakeSearchInput) {
+            suggestBox.style.display = "none";
+        }
+    });
+
+    // Push product to local array queue memory
+    function addItemToBatch(product) {
+        // Prevent duplicate items inside the same active lineup
+        const isDuplicate = localBatchList.some(item => item.id === product.id);
+        if (isDuplicate) {
+            alert("Энэ бараа түр жагсаалтад аль хэдийн нэмэгдсэн байна!");
+            return;
+        }
+
+        // Add item with a default intake quantity of 10
+        localBatchList.push({
+            ...product,
+            intakeAmount: 10
+        });
+        renderLocalBatchTable();
+    }
+
+    // Remove item from batch list array
+    window.removeBatchItem = function(index) {
+        localBatchList.splice(index, 1);
+        renderLocalBatchTable();
+    }
+
+    // Keep change amount track input updated inside state object
+    window.updateBatchQty = function(index, value) {
+        const parsed = parseInt(value);
+        if(!isNaN(parsed) && parsed > 0) {
+            localBatchList[index].intakeAmount = parsed;
+        }
+    }
+
+    // Render local lineup array list underneath input grid sheet layout
+    function renderLocalBatchTable() {
+        intakeTableBody.innerHTML = '';
+        const submitBtnContainer = document.getElementById('submitAllContainer');
+
+        if(localBatchList.length === 0) {
+            intakeTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 30px;">Татах бараануудаа дээрээс хайж сонгон энд жагсаана уу.</td></tr>';
+            submitBtnContainer.style.display = "none";
+            return;
+        }
+
+        submitBtnContainer.style.display = "flex";
+
+        localBatchList.forEach((product, index) => {
+            const currentStock = parseInt(product['Барааны тооллого'] || 0);
+            const row = `
+                <tr>
+                    <td><strong>${product['Барааны нэр'] || '—'}</strong></td>
+                    <td><span style="color: #94a3b8;">${product['Төрөл'] || '—'}</span></td>
+                    <td><code>${product['код'] || '0'}</code></td>
+                    <td>${getLocationBadgeMarkup(product['Байршил'])}</td>
+                    <td>${currentStock} ширхэг</td>
+                    <td>
+                        <input type="number" value="${product.intakeAmount}" min="1" style="padding:6px; font-weight:bold; text-align:center;" oninput="updateBatchQty(${index}, this.value)">
+                    </td>
+                    <td>
+                        <button class="danger-btn" onclick="removeBatchItem(${index})">❌ Хасах</button>
+                    </td>
+                </tr>
+            `;
+            intakeTableBody.innerHTML += row;
+        });
+    }
+
+    // SAVE THE COMPLETED BATCH INTAKE ARRAY TO REMOTE SUPABASE INSTANCE
+    window.saveWholeBatchToDatabase = async function() {
+        if(localBatchList.length === 0) return;
+
+        statusBox.style.color = "#f39c12";
+        statusBox.innerText = "⏳ Багц таталтыг сервер рүү хадгалж байна... Түр хүлээнэ үү...";
+
+        let errorsOccurred = 0;
+
+        for (const item of localBatchList) {
+            const currentStock = parseInt(item['Барааны тооллого'] || 0);
+            const additionalQty = parseInt(item.intakeAmount || 0);
+            const totalUpdatedStock = currentStock + additionalQty;
+
+            const { error } = await supabaseClient
+                .from('products')
+                .update({ 'Барааны тооллого': totalUpdatedStock })
+                .eq('id', item.id);
+
+            if(error) {
+                errorsOccurred++;
+                console.error(`Error saving item ID ${item.id}:`, error.message);
+            }
+        }
+
+        if(errorsOccurred > 0) {
+            statusBox.style.color = "#ef4444";
+            statusBox.innerText = `⚠️ Таталтыг хадгалахад ${errorsOccurred} алдаа гарлаа!`;
+            alert("Зарим барааг хадгалахад алдаа гарлаа. Консол шалгана уу.");
+        } else {
+            statusBox.style.color = "#10b981";
+            statusBox.innerText = `🎉 Багц таталт амжилттай бүртгэгдлээ! Нийт ${localBatchList.length} бараа шинэчлэгдэв.`;
+            alert(`Амжилттай! ${localBatchList.length} барааны тооллогыг баазад нэмж хадгаллаа.`);
+            localBatchList = []; // Reset storage lineup container
+            renderLocalBatchTable();
+            updateBadgeCount();
+        }
+    }
 
     async function fetchProducts() {
         try {
@@ -393,81 +553,6 @@
             statusBox.style.color = "#ef4444";
             statusBox.innerText = "Алдаа гарлаа: " + err.message;
         }
-    }
-
-    // PROCESS STOCK INTAKE BATCH BATCH INCOMING SHEET
-    window.processIncomingBatch = async function() {
-        const rawText = document.getElementById('intakeBatchRaw').value.trim();
-        const intakeLocation = document.getElementById('intakeLoc').value;
-        const selectedDate = document.getElementById('intakeDate').value;
-
-        if (!rawText) {
-            alert("Таталтын жагсаалт хоосон байна!");
-            return;
-        }
-
-        intakeLogBox.innerHTML = `> [${selectedDate}] Бараа таталт эхэллээ (${intakeLocation})...\n`;
-        const lines = rawText.split('\n');
-        
-        let successCount = 0;
-        let failCount = 0;
-
-        for (let line of lines) {
-            line = line.trim();
-            if (!line) continue;
-
-            // Split line by comma or whitespace spacing
-            const parts = line.split(/[\s,]+/);
-            if (parts.length < 2) {
-                intakeLogBox.innerHTML += `<span class="log-error">! Алдаатай мөр алгаслаа: "${line}"</span>\n`;
-                failCount++;
-                continue;
-            }
-
-            const inputCode = parseFloat(parts[0]);
-            const intakeQty = parseInt(parts[1]);
-
-            if (isNaN(inputCode) || isNaN(intakeQty) || intakeQty <= 0) {
-                intakeLogBox.innerHTML += `<span class="log-error">! Буруу форматтай өгөгдөл: "${line}"</span>\n`;
-                failCount++;
-                continue;
-            }
-
-            // Find matching product with location filter
-            const { data: existingProducts, error: checkError } = await supabaseClient
-                .from('products')
-                .select('*')
-                .eq('код', inputCode)
-                .eq('Байршил', intakeLocation);
-
-            if (checkError || !existingProducts || existingProducts.length === 0) {
-                intakeLogBox.innerHTML += `<span class="log-error">❌ Системд бүртгэлгүй код олдсонгүй: Код ${inputCode} (${intakeLocation})</span>\n`;
-                failCount++;
-                continue;
-            }
-
-            const product = existingProducts[0];
-            const currentStock = parseInt(product['Барааны тооллого'] || 0);
-            const newStock = currentStock + intakeQty;
-
-            // Save addition into remote database row
-            const { error: updateError } = await supabaseClient
-                .from('products')
-                .update({ 'Барааны тооллого': newStock })
-                .eq('id', product.id);
-
-            if (updateError) {
-                intakeLogBox.innerHTML += `<span class="log-error">❌ Код ${inputCode} шинэчлэхэд алдаа гарлаа: ${updateError.message}</span>\n`;
-                failCount++;
-            } else {
-                intakeLogBox.innerHTML += `<span class="log-success">✅ Амжилттай нэмэгдлээ: ${product['Барааны нэр']} (Код: ${inputCode}) | +${intakeQty} ш -> Шинэ үлдэгдэл: ${newStock}</span>\n`;
-                successCount++;
-            }
-        }
-
-        intakeLogBox.innerHTML += `\n> 🎉 Дууслаа! Амжилттай: ${successCount}, Алгассан/Алдаа: ${failCount}\n`;
-        document.getElementById('intakeBatchRaw').value = '';
-        updateBadgeCount();
     }
 
     function getLocationBadgeMarkup(locationString) {
@@ -569,7 +654,7 @@
         fetchOutOfStockItems();
     }
 
-    // UNLIMITED CURSOR KEY PAGINATION PRINT ENGINE (Completely circumvents the 1,000 item limit)
+    // UNLIMITED CURSOR KEY PAGINATION PRINT ENGINE (Circumvents the 1,000 item limit)
     window.printCompleteList = async function() {
         const originalStatus = statusBox.innerText;
         const originalColor = statusBox.style.color;
